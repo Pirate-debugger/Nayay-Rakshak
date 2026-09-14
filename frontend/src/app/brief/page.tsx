@@ -50,8 +50,9 @@ function BriefContent() {
       setLoading(true);
       const res = await createBrief(selectedDocId, clientName.trim(), questions);
       setBrief(res);
-    } catch (err: any) {
-      alert(err.message || 'Failed to generate brief');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to generate brief';
+      alert(message);
     } finally {
       setLoading(false);
     }

@@ -45,8 +45,9 @@ export default function FileUploader({ onSuccess, lang = 'en' }: Props) {
       setUploading(true);
       const doc = await uploadDocument(file, undefined, redactPii);
       onSuccess(doc);
-    } catch (err: any) {
-      setError(err.message || 'Upload failed. Please try again.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Upload failed. Please try again.';
+      setError(message);
     } finally {
       setUploading(false);
     }

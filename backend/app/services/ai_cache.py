@@ -49,16 +49,19 @@ class AICacheService:
         question: str,
         model_name: str = "gemini-2.5-flash",
         prompt_version: str = "v1.0",
-        pii_redacted: bool = True
+        pii_redacted: bool = True,
+        user_id: Optional[int] = None
     ) -> str:
         """
         Compute deterministic SHA-256 cache identity.
+        For private user documents, scopes by user_id to prevent cross-user result leakage.
         """
         doc_hash = (document_content_hash or "statutory_general").strip()
         norm_q = question.strip().lower()
         active_source_ver = source_registry.get_version()
+        user_scope = f"user_{user_id}" if user_id and document_content_hash and doc_hash != "statutory_general" else "global"
 
-        identity_str = f"{doc_hash}:{norm_q}:{model_name}:{prompt_version}:{active_source_ver}:{pii_redacted}"
+        identity_str = f"{user_scope}:{doc_hash}:{norm_q}:{model_name}:{prompt_version}:{active_source_ver}:{pii_redacted}"
         return hashlib.sha256(identity_str.encode("utf-8")).hexdigest()
 
     async def get(
@@ -154,6 +157,7 @@ class AICacheService:
                 self._memory_cache.popitem(last=False)
             self._memory_cache[cache_key] = {
                 "response_data": response_data,
+                "document_hash": document_content_hash,
                 "source_registry_version": active_source_ver,
                 "expires_at": expires_at,
                 "hit_count": 1
@@ -190,6 +194,46 @@ class AICacheService:
                 await db.commit()
             except Exception as e:
                 logger.warning(f"Error persisting to DB AI cache: {e}")
+
+    async def evict_document(
+        self,
+        document_content_hash: str,
+        db: Optional[AsyncSession] = None
+    ) -> int:
+        """
+        Purge all sensitive cached results when a source document is deleted.
+        Removes entries from both in-memory LRU and SQL database.
+        """
+        if not document_content_hash:
+            return 0
+
+        evicted_count = 0
+        # 1. Clear matching in-memory cache entries
+        async with self._lock:
+            keys_to_delete = [
+                k for k, v in self._memory_cache.items()
+                if v.get("document_hash") == document_content_hash
+            ]
+            for k in keys_to_delete:
+                del self._memory_cache[k]
+                evicted_count += 1
+
+        # 2. Delete from DB
+        if db:
+            try:
+                q = select(AICacheEntry).where(AICacheEntry.document_hash == document_content_hash)
+                res = await db.execute(q)
+                entries = res.scalars().all()
+                for entry in entries:
+                    await db.delete(entry)
+                    evicted_count += 1
+                await db.commit()
+                if entries:
+                    logger.info(f"Purged {len(entries)} DB cache entries for document hash {document_content_hash[:8]}.")
+            except Exception as e:
+                logger.warning(f"Error evicting DB AI cache entries: {e}")
+
+        return evicted_count
 
     def clear(self) -> None:
         """Clear memory cache."""

@@ -1,7 +1,7 @@
 {
   "benchmark_name": "NYAYA-BENCH",
   "dataset_version": "1.0.0",
-  "timestamp": "2026-09-14T09:39:01.482509+00:00",
+  "timestamp": "2026-09-14T10:33:40.635812+00:00",
   "summary": {
     "total_cases": 13,
     "passed_cases": 13,

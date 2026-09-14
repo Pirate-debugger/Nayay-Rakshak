@@ -220,8 +220,9 @@ export default function ComparePage() {
     setCatFilter('ALL'); setDimFilter('ALL'); setMatFilter('ALL'); setActiveFinding(null);
     try {
       setComparison(await compareDocuments(base, target));
-    } catch (err: any) {
-      alert(err.message || 'Comparison failed');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Comparison failed';
+      alert(message);
     } finally {
       setLoading(false);
     }
@@ -235,8 +236,9 @@ export default function ComparePage() {
       setDocuments([base, target, ...documents]);
       setBaseDocId(base.id); setTargetDocId(target.id);
       await handleCompare(base.id, target.id);
-    } catch (err: any) {
-      alert(err.message || 'Quick compare failed');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Quick compare failed';
+      alert(message);
     } finally {
       setQuickLoading(false);
     }

@@ -35,13 +35,17 @@ LEGAL_DISCLAIMER_TEXT = (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize database schemas
+    # 1. Enforce strict fail-fast production settings validation
+    settings.validate_production_settings()
+
+    # 2. Initialize database schemas
     await init_db()
     try:
         from app.db.base import AsyncSessionLocal
         from app.db.seed import seed_database
         async with AsyncSessionLocal() as session:
-            await seed_database(session)
+            include_demo = settings.ENABLE_DEMO_ACCOUNTS or not settings.is_production()
+            await seed_database(session, include_demo=include_demo)
     except Exception as e:
         logger.warning(f"Database seed initialization warning: {e}")
     yield
@@ -56,20 +60,40 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Set rate limiter
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+def custom_rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    msg = f"Rate limit exceeded: {exc.detail}"
+    response = JSONResponse(
+        status_code=429,
+        content={"detail": msg, "error": msg}
+    )
+    if hasattr(request.state, "view_rate_limit"):
+        response = request.app.state.limiter._inject_headers(response, request.state.view_rate_limit)
+    return response
+
+app.add_exception_handler(RateLimitExceeded, custom_rate_limit_exceeded_handler)
 
 # 1. Security Headers Middleware (strict CSP, HSTS, anti-clickjacking, nosniff, permissions)
 app.add_middleware(SecurityHeadersMiddleware)
 
-# 2. CORS configuration
+# 2. Hardened CORS configuration (strictly permitted methods & headers, no wildcards)
+ALLOWED_CORS_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"]
+ALLOWED_CORS_HEADERS = [
+    "Authorization",
+    "Content-Type",
+    "Accept",
+    "Origin",
+    "X-Requested-With",
+    "X-Legal-Disclaimer",
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=ALLOWED_CORS_METHODS,
+    allow_headers=ALLOWED_CORS_HEADERS,
 )
 
 # Generic safe exception handler to prevent internal stack trace leakage

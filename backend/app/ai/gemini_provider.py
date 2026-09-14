@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from typing import Any, Dict, List
@@ -14,6 +15,7 @@ class GeminiProvider(BaseAIProvider):
     """
     Google Gemini API provider implementation.
     Falls back gracefully to DeterministicMockAIProvider if API key is invalid or quota exhausted.
+    All external network calls are executed in non-blocking worker threads.
     """
 
     def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash"):
@@ -39,7 +41,8 @@ class GeminiProvider(BaseAIProvider):
         user_prompt = f"{system_prompt}\n\n{encapsulate_untrusted_document(text)}"
 
         try:
-            response = self.model.generate_content(
+            response = await asyncio.to_thread(
+                self.model.generate_content,
                 user_prompt,
                 generation_config={"response_mime_type": "application/json"}
             )
@@ -56,14 +59,28 @@ class GeminiProvider(BaseAIProvider):
         context = "\n---\n".join([f"[Page {c.get('page_number', 1)}]: {c.get('clean_content', '')}" for c in chunks[:10]])
         prompt = (
             "You are Nyaya Rakshak Grounded Q&A. Answer the user question STRICTLY using the context below. "
-            "If the answer cannot be found in the context, you MUST say: 'I could not verify this from the available sources.' "
-            "Provide page citations and exact quote.\n\n"
+            "If the answer cannot be found in the context, you MUST state: 'I could not verify this from the available sources.' "
+            "Return valid JSON with keys: "
+            "'answer' (string), 'confidence_score' (float between 0.0 and 1.0), 'is_found_in_document' (boolean), "
+            "'citations' (list of objects with 'page_number' (int), 'section_title' (string), 'verbatim_quote' (string), 'relevance_score' (float)).\n\n"
             f"Context:\n{context}\n\n"
             f"Question: {question}"
         )
         try:
-            self.model.generate_content(prompt)
-            # Use fallback parsing for exact citation structures if needed
+            response = await asyncio.to_thread(
+                self.model.generate_content,
+                prompt,
+                generation_config={"response_mime_type": "application/json"}
+            )
+            data = json.loads(response.text)
+            if isinstance(data, dict) and "answer" in data:
+                return {
+                    "question": question,
+                    "answer": data.get("answer", ""),
+                    "confidence_score": float(data.get("confidence_score", 0.85)),
+                    "citations": data.get("citations", []),
+                    "is_found_in_document": bool(data.get("is_found_in_document", True))
+                }
             return await self.fallback.answer_question(question, chunks)
         except Exception as e:
             logger.warning(f"Gemini QA failed: {e}. Falling back.")
@@ -109,7 +126,8 @@ class GeminiProvider(BaseAIProvider):
             f"Clause Text:\n{encapsulate_untrusted_document(clause_text)}"
         )
         try:
-            response = self.model.generate_content(
+            response = await asyncio.to_thread(
+                self.model.generate_content,
                 prompt,
                 generation_config={"response_mime_type": "application/json"}
             )

@@ -55,8 +55,9 @@ function VerifyContent() {
       setLoading(true);
       const res = await verifyClaims(claimsList, selectedDocId || undefined);
       setBatchResult(res);
-    } catch (err: any) {
-      alert(err.message || 'Verification failed');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Verification failed';
+      alert(message);
     } finally {
       setLoading(false);
     }

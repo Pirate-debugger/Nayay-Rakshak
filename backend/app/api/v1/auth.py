@@ -9,6 +9,7 @@ from sqlalchemy.future import select
 from app.api.deps import get_current_user, security_bearer
 from app.core.audit import log_audit_event
 from app.core.config import settings
+from app.core.rate_limit import limiter
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -44,6 +45,7 @@ def make_aware(dt: Optional[datetime]) -> Optional[datetime]:
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit(settings.RATE_LIMIT_REGISTER)
 async def register(
     req: UserRegister,
     request: Request,
@@ -131,6 +133,7 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit(settings.RATE_LIMIT_LOGIN)
 async def login(
     req: UserLogin,
     request: Request,

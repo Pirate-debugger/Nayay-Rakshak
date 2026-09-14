@@ -8,6 +8,8 @@ from app.core.audit import log_audit_event
 from app.core.authorization import authorize_object_access
 from app.core.exceptions import ObjectNotFoundError
 from app.core.roles import Action
+from app.core.config import settings
+from app.core.rate_limit import limiter
 from app.db.base import get_db
 from app.db.models import Document, DocumentChunk, User
 from app.schemas.qa import QARequest, QAResponse
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/qa", tags=["Grounded Q&A"])
 
 
 @router.post("/", response_model=QAResponse)
+@limiter.limit(settings.RATE_LIMIT_QA)
 async def question_answering_endpoint(
     req: QARequest,
     request: Request,
@@ -75,7 +78,8 @@ async def question_answering_endpoint(
         question=f"{req.question}:{req.language}:{req.jurisdiction or ''}",
         model_name="qa-grounded-v1",
         prompt_version="v1.0",
-        pii_redacted=True
+        pii_redacted=True,
+        user_id=current_user.id if current_user else None
     )
     cached_data = await ai_cache_service.get(cache_key, db=db)
     if cached_data:

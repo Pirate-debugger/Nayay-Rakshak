@@ -9,7 +9,9 @@ from app.ai.base import BaseAIProvider
 from app.api.deps import get_ai, get_current_user
 from app.core.audit import log_audit_event
 from app.core.authorization import authorize_object_access
+from app.core.config import settings
 from app.core.exceptions import ObjectNotFoundError, UnauthorizedAccessError
+from app.core.rate_limit import limiter
 from app.core.roles import Action
 from app.db.base import get_db
 from app.db.models import ComparisonResult, Document, DocumentChunk, User
@@ -22,6 +24,7 @@ class CompareRequest(BaseModel):
     target_document_id: int
 
 @router.post("/", response_model=ComparisonResponse)
+@limiter.limit(settings.RATE_LIMIT_COMPARISON)
 async def compare_documents_endpoint(
     req: CompareRequest,
     request: Request,

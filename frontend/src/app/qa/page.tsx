@@ -51,8 +51,9 @@ function QAContent() {
       setError(null);
       const res = await askQuestion(selectedDocId, q.trim());
       setResponse(res);
-    } catch (err: any) {
-      setError(err.message || 'Failed to get answer');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to get answer';
+      setError(message);
     } finally {
       setLoading(false);
     }

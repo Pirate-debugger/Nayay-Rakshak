@@ -21,8 +21,13 @@ def _sanitize_details_recursive(obj: Any) -> Any:
     """Recursively scrub secrets and Indian PII from log detail dictionaries."""
     if isinstance(obj, dict):
         cleaned = {}
+        sensitive_patterns = [
+            "password", "secret", "token", "auth", "credential",
+            "raw_text", "content", "api_key", "key", "authorization",
+            "cookie", "access_token", "refresh_token", "bearer", "private_key"
+        ]
         for k, v in obj.items():
-            if any(s in k.lower() for s in ["password", "secret", "token", "auth", "credential", "raw_text", "content"]):
+            if any(s in k.lower() for s in sensitive_patterns):
                 cleaned[k] = "[REDACTED]"
             else:
                 cleaned[k] = _sanitize_details_recursive(v)

@@ -83,14 +83,9 @@ async def execute_document_ingestion(
         with open(quarantine_path, "wb") as f:
             f.write(file_bytes)
 
-        doc.status = "QUARANTINED"
         doc.storage_path = quarantine_path
-        await db.commit()
 
         # Stage 4: MALWARE & SECURITY SCAN
-        doc.status = "SCANNING"
-        await db.commit()
-
         ext = f".{file_type}"
         is_malicious, scan_reason = detect_malicious_content(file_bytes, ext)
         if is_malicious:
@@ -115,8 +110,8 @@ async def execute_document_ingestion(
             logger.info(f"Duplicate document detected (Hash: {content_hash[:8]}). Reusing verified chunks from Document {dup_doc.id}.")
             existing_chunks_q = select(DocumentChunk).where(DocumentChunk.document_id == dup_doc.id).order_by(DocumentChunk.chunk_index)
             existing_chunks = (await db.execute(existing_chunks_q)).scalars().all()
-            for ec in existing_chunks:
-                cloned_chunk = DocumentChunk(
+            cloned_chunks = [
+                DocumentChunk(
                     document_id=doc.id,
                     version_id=None,
                     chunk_index=ec.chunk_index,
@@ -128,7 +123,10 @@ async def execute_document_ingestion(
                     token_count=ec.token_count,
                     embedding=ec.embedding
                 )
-                db.add(cloned_chunk)
+                for ec in existing_chunks
+            ]
+            if cloned_chunks:
+                db.add_all(cloned_chunks)
 
             doc.page_count = dup_doc.page_count
             doc.status = "READY"
@@ -163,9 +161,6 @@ async def execute_document_ingestion(
             }
 
         # Stage 6 & 7: METADATA & TEXT EXTRACTION
-        doc.status = "PROCESSING"
-        await db.commit()
-
         structure = extract_document_structure(file_bytes, file_type)
         pages = structure["pages"]
         sections = structure["sections"]
@@ -174,8 +169,8 @@ async def execute_document_ingestion(
 
         doc.page_count = len(pages) if pages else 1
 
-        # Stage 8 to 12: PAGE SEGMENTATION, HEADINGS, CLAUSES
-        # 10. Page segmentation
+        # Stage 8 to 12: PAGE SEGMENTATION, HEADINGS, CLAUSES (Batched)
+        new_pages = []
         for p in pages:
             raw_p_text = p["raw_text"]
             clean_p_text = p["clean_text"]
@@ -184,48 +179,56 @@ async def execute_document_ingestion(
             if redact_pii:
                 clean_p_text, pii_stats = sanitize_pii(clean_p_text)
 
-            doc_page = DocumentPage(
-                document_id=doc.id,
-                page_number=p["page_number"],
-                raw_text=raw_p_text,
-                clean_text=clean_p_text,
-                ocr_confidence=p["ocr_confidence"],
-                layout_data=p.get("layout_data", "[]")
+            new_pages.append(
+                DocumentPage(
+                    document_id=doc.id,
+                    page_number=p["page_number"],
+                    raw_text=raw_p_text,
+                    clean_text=clean_p_text,
+                    ocr_confidence=p["ocr_confidence"],
+                    layout_data=p.get("layout_data", "[]")
+                )
             )
-            db.add(doc_page)
+        if new_pages:
+            db.add_all(new_pages)
 
         # 11. Heading detection
-        for s in sections:
-            doc_section = DocumentSection(
+        new_sections = [
+            DocumentSection(
                 document_id=doc.id,
                 section_title=s["section_title"],
                 section_number=s.get("section_number"),
                 start_page=s.get("start_page", 1),
                 end_page=s.get("end_page", 1)
             )
-            db.add(doc_section)
+            for s in sections
+        ]
+        if new_sections:
+            db.add_all(new_sections)
 
         # 12. Clause extraction
+        new_clauses = []
         for c in clauses:
             clean_clause_text = c["clean_text"]
             if redact_pii:
                 clean_clause_text, _ = sanitize_pii(clean_clause_text)
             clean_clause_text = sanitize_user_input(clean_clause_text)
 
-            db_clause = Clause(
-                document_id=doc.id,
-                clause_identifier=c["clause_identifier"],
-                title=c["title"],
-                category=c["category"],
-                page_number=c["page_number"],
-                raw_text=c["raw_text"],
-                clean_text=clean_clause_text,
-                risk_level=c["risk_level"],
-                is_unfair=c.get("is_unfair", False)
+            new_clauses.append(
+                Clause(
+                    document_id=doc.id,
+                    clause_identifier=c["clause_identifier"],
+                    title=c["title"],
+                    category=c["category"],
+                    page_number=c["page_number"],
+                    raw_text=c["raw_text"],
+                    clean_text=clean_clause_text,
+                    risk_level=c["risk_level"],
+                    is_unfair=c.get("is_unfair", False)
+                )
             )
-            db.add(db_clause)
-
-        await db.commit()
+        if new_clauses:
+            db.add_all(new_clauses)
 
         # Stage 14 & 15: NORMALIZATION & CHUNKING WITH PROVENANCE
         chunks = chunk_document_with_provenance(
@@ -236,10 +239,8 @@ async def execute_document_ingestion(
             version_id=None
         )
 
-        # Stage 16 & 17: EMBEDDING & INDEXING
-        doc.status = "INDEXING"
-        await db.commit()
-
+        # Stage 16 & 17: EMBEDDING & INDEXING (Batched)
+        new_chunks = []
         for c in chunks:
             clean_chunk_content = c["clean_content"]
             if redact_pii:
@@ -249,19 +250,22 @@ async def execute_document_ingestion(
             # Generate synthetic / deterministic 768-dim embedding vector
             embedding_vector = [0.01 * ((i % 10) + 1) for i in range(768)]
 
-            db_chunk = DocumentChunk(
-                document_id=doc.id,
-                version_id=None,
-                chunk_index=c["chunk_index"],
-                page_number=c["page_number"],
-                section_title=c.get("section_title"),
-                content_hash=content_hash,
-                content=c["content"],
-                clean_content=clean_chunk_content,
-                token_count=c["token_count"],
-                embedding=embedding_vector
+            new_chunks.append(
+                DocumentChunk(
+                    document_id=doc.id,
+                    version_id=None,
+                    chunk_index=c["chunk_index"],
+                    page_number=c["page_number"],
+                    section_title=c.get("section_title"),
+                    content_hash=content_hash,
+                    content=c["content"],
+                    clean_content=clean_chunk_content,
+                    token_count=c["token_count"],
+                    embedding=embedding_vector
+                )
             )
-            db.add(db_chunk)
+        if new_chunks:
+            db.add_all(new_chunks)
 
         # Move file from quarantine to permanent storage
         os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -278,6 +282,7 @@ async def execute_document_ingestion(
 
         job.status = "COMPLETED"
         job.completed_at = datetime.now(timezone.utc)
+        # Single atomic batch commit for pages, sections, clauses, chunks, doc status, and job status
         await db.commit()
 
         log_audit_event(

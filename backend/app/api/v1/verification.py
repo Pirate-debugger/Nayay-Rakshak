@@ -8,7 +8,9 @@ from app.ai.base import BaseAIProvider
 from app.api.deps import get_ai, get_current_user_optional
 from app.core.audit import log_audit_event
 from app.core.authorization import authorize_object_access
+from app.core.config import settings
 from app.core.exceptions import ObjectNotFoundError
+from app.core.rate_limit import limiter
 from app.core.roles import Action
 from app.db.base import get_db
 from app.db.models import Document, DocumentChunk, User
@@ -26,6 +28,7 @@ from app.services.prompt_guard import check_for_injection, sanitize_user_input
 router = APIRouter(prefix="/verification", tags=["Evidence Grounding & Claim Verification"])
 
 @router.post("/", response_model=VerificationBatchResponse)
+@limiter.limit(settings.RATE_LIMIT_VERIFICATION)
 async def verify_claims_endpoint(
     req: VerificationRequest,
     request: Request,

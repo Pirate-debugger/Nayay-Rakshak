@@ -10,7 +10,9 @@ from app.ai.base import BaseAIProvider
 from app.api.deps import get_ai, get_current_user
 from app.core.audit import log_audit_event
 from app.core.authorization import authorize_object_access
+from app.core.config import settings
 from app.core.exceptions import ObjectNotFoundError, UnauthorizedAccessError
+from app.core.rate_limit import limiter
 from app.core.roles import Action
 from app.db.base import get_db
 from app.db.models import AnalysisResult, Document, DocumentChunk, User
@@ -108,6 +110,7 @@ async def get_document_structured_clauses(
 
 
 @router.post("/{document_id}", response_model=AnalysisResponse)
+@limiter.limit(settings.RATE_LIMIT_ANALYSIS)
 async def analyze_document_endpoint(
     document_id: int,
     request: Request,

@@ -21,7 +21,7 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-async def seed_database(db: AsyncSession) -> None:
+async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
     """
     Seed authoritative Indian legal sources and clearly demarcated fake/demo records.
     Rule: Never fabricate legal authorities. Present only official Gazette laws.
@@ -281,63 +281,64 @@ async def seed_database(db: AsyncSession) -> None:
             db.add(resource)
 
     # -------------------------------------------------------------------------
-    # 3. CLEARLY MARKED DEMO / FAKE SEED RECORDS
+    # 3. CLEARLY MARKED DEMO / FAKE SEED RECORDS (Separated from production law)
     # -------------------------------------------------------------------------
-    demo_org_slug = "demo-citizen-clinic"
-    demo_org_res = await db.execute(select(Organization).where(Organization.slug == demo_org_slug))
-    demo_org = demo_org_res.scalar_one_or_none()
-    if not demo_org:
-        demo_org = Organization(
-            name="[DEMO] Nyaya Citizen Legal Aid Clinic",
-            slug=demo_org_slug
-        )
-        db.add(demo_org)
-        await db.commit()
-        await db.refresh(demo_org)
+    if include_demo:
+        demo_org_slug = "demo-citizen-clinic"
+        demo_org_res = await db.execute(select(Organization).where(Organization.slug == demo_org_slug))
+        demo_org = demo_org_res.scalar_one_or_none()
+        if not demo_org:
+            demo_org = Organization(
+                name="[DEMO] Nyaya Citizen Legal Aid Clinic",
+                slug=demo_org_slug
+            )
+            db.add(demo_org)
+            await db.commit()
+            await db.refresh(demo_org)
 
-    demo_user_email = "demo.citizen@nyayarakshak.in"
-    demo_user_res = await db.execute(select(User).where(User.email == demo_user_email))
-    demo_user = demo_user_res.scalar_one_or_none()
-    if not demo_user:
-        demo_user = User(
-            email=demo_user_email,
-            hashed_password=get_password_hash("DemoCitizen2026!"),
-            full_name="[DEMO] Ananya Sharma",
-            role="user",
-            is_demo=True
-        )
-        db.add(demo_user)
-        await db.commit()
-        await db.refresh(demo_user)
+        demo_user_email = "demo.citizen@nyayarakshak.in"
+        demo_user_res = await db.execute(select(User).where(User.email == demo_user_email))
+        demo_user = demo_user_res.scalar_one_or_none()
+        if not demo_user:
+            demo_user = User(
+                email=demo_user_email,
+                hashed_password=get_password_hash("DemoCitizen2026!"),
+                full_name="[DEMO] Ananya Sharma",
+                role="user",
+                is_demo=True
+            )
+            db.add(demo_user)
+            await db.commit()
+            await db.refresh(demo_user)
 
-        # Add demo membership
-        membership = Membership(
-            organization_id=demo_org.id,
-            user_id=demo_user.id,
-            role="member"
-        )
-        db.add(membership)
+            # Add demo membership
+            membership = Membership(
+                organization_id=demo_org.id,
+                user_id=demo_user.id,
+                role="member"
+            )
+            db.add(membership)
 
-    demo_adv_email = "demo.advocate@nyayarakshak.in"
-    demo_adv_res = await db.execute(select(User).where(User.email == demo_adv_email))
-    if not demo_adv_res.scalar_one_or_none():
-        demo_adv = User(
-            email=demo_adv_email,
-            hashed_password=get_password_hash("DemoAdvocate2026!"),
-            full_name="[DEMO] Adv. Rajesh Verma",
-            role="advocate",
-            is_demo=True
-        )
-        db.add(demo_adv)
-        await db.commit()
-        await db.refresh(demo_adv)
+        demo_adv_email = "demo.advocate@nyayarakshak.in"
+        demo_adv_res = await db.execute(select(User).where(User.email == demo_adv_email))
+        if not demo_adv_res.scalar_one_or_none():
+            demo_adv = User(
+                email=demo_adv_email,
+                hashed_password=get_password_hash("DemoAdvocate2026!"),
+                full_name="[DEMO] Adv. Rajesh Verma",
+                role="advocate",
+                is_demo=True
+            )
+            db.add(demo_adv)
+            await db.commit()
+            await db.refresh(demo_adv)
 
-        membership_adv = Membership(
-            organization_id=demo_org.id,
-            user_id=demo_adv.id,
-            role="advocate"
-        )
-        db.add(membership_adv)
+            membership_adv = Membership(
+                organization_id=demo_org.id,
+                user_id=demo_adv.id,
+                role="advocate"
+            )
+            db.add(membership_adv)
 
     await db.commit()
-    logger.info("Database seeding completed: Authoritative statutes and demo records initialized.")
+    logger.info("Database seeding completed: Authoritative statutes and records initialized.")

@@ -69,8 +69,9 @@ export default function LegalAidPage() {
         is_industrial_workman: isWorkman,
       });
       setEligibilityResult(res);
-    } catch (err: any) {
-      alert(err.message || 'Failed to check eligibility');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to check eligibility';
+      alert(message);
     } finally {
       setChecking(false);
     }

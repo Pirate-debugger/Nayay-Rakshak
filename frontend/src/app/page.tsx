@@ -32,8 +32,9 @@ export default function HomePage() {
       setLoadingSample(sampleKey);
       const doc = await loadSampleDocument(sampleKey);
       router.push(`/analyze?docId=${doc.id}`);
-    } catch (err: any) {
-      alert(err.message || 'Failed to load sample. You can still test from the dashboard.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load sample. You can still test from the dashboard.';
+      alert(message);
       router.push('/dashboard');
     } finally {
       setLoadingSample(null);

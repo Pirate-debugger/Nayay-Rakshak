@@ -33,8 +33,9 @@ export default function ClauseCard({ clause, lang: propLang }: Props) {
       const res = await extractSingleClause(clause.original_text, clause.title, clause.category);
       setStructuredRecord(res);
       setIsModalOpen(true);
-    } catch (err: any) {
-      alert(err.message || 'Failed to extract structured clause facts');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to extract structured clause facts';
+      alert(message);
     } finally {
       setLoadingStructured(false);
     }

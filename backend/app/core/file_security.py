@@ -60,13 +60,77 @@ def generate_secure_storage_name(prefix: str, extension: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex}{clean_ext}"
 
 
+EICAR_SIGNATURE = b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+
+
+def scan_with_clamav_socket(file_bytes: bytes, host: str, port: int, timeout: float = 2.0) -> Tuple[bool, str]:
+    """
+    Query ClamAV daemon using standard INSTREAM protocol over TCP socket.
+    Returns (is_infected, message).
+    """
+    try:
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(timeout)
+            s.connect((host, port))
+            s.sendall(b"zINSTREAM\x00")
+
+            chunk_size = 2048
+            for i in range(0, len(file_bytes), chunk_size):
+                chunk = file_bytes[i:i + chunk_size]
+                chunk_len = len(chunk).to_bytes(4, byteorder="big")
+                s.sendall(chunk_len + chunk)
+            s.sendall(b"\x00\x00\x00\x00")
+
+            response = s.recv(1024)
+            if b"FOUND" in response:
+                result_str = response.decode("utf-8", errors="replace").strip()
+                return True, f"ClamAV Antivirus signature detected: {result_str}"
+            elif b"OK" in response:
+                return False, ""
+            return False, ""
+    except Exception as e:
+        return False, f"CLAMAV_UNAVAILABLE: {str(e)}"
+
+
+def scan_with_malware_engine(file_bytes: bytes, filename: str) -> Tuple[bool, str]:
+    """
+    Multi-engine malware inspection for untrusted legal documents.
+    1. Built-in EICAR standard anti-virus signature detection.
+    2. Configurable ClamAV daemon scan with fail-closed production mode.
+    """
+    import logging
+    _logger = logging.getLogger("nyaya_rakshak.malware_scan")
+
+    # 1. Built-in EICAR signature verification
+    if EICAR_SIGNATURE in file_bytes:
+        return True, "EICAR standard anti-virus test signature detected in document stream."
+
+    # 2. Configurable ClamAV daemon
+    if settings.ENABLE_CLAMAV_SCAN:
+        is_infected, msg = scan_with_clamav_socket(file_bytes, settings.CLAMAV_HOST, settings.CLAMAV_PORT)
+        if is_infected:
+            return True, msg
+        if "CLAMAV_UNAVAILABLE" in msg:
+            if settings.CLAMAV_REQUIRED:
+                raise SecurityValidationError(f"Production security violation: Antivirus scanner is unreachable ({msg}).")
+            _logger.warning(f"ClamAV scanner unavailable ({msg}); proceeding with built-in heuristic signature detection.")
+
+    return False, ""
+
+
 def detect_malicious_content(file_bytes: bytes, ext: str) -> Tuple[bool, str]:
     """
-    Inspect raw binary stream for embedded executables, Office macros, zip-slips, or decompression bombs.
+    Inspect raw binary stream for embedded executables, Office macros, zip-slips, decompression bombs, or malware.
     Returns (is_malicious, description).
     """
     if not file_bytes:
         return True, "File is completely empty (0 bytes)."
+
+    # 0. Anti-virus & EICAR test signature detection
+    is_infected, msg = scan_with_malware_engine(file_bytes, ext)
+    if is_infected:
+        return True, msg
 
     # 1. Check for raw executable headers
     for sig, desc in EXECUTABLE_SIGNATURES:
@@ -83,10 +147,10 @@ def detect_malicious_content(file_bytes: bytes, ext: str) -> Tuple[bool, str]:
                         return True, "Malicious zip-slip path traversal entry detected inside DOCX."
                     # Check for Word VBA macros
                     lower_entry = entry.lower()
-                    if any(macro_file in lower_entry for macro_file in ["vbaproject.bin", "word/vbadata.xml", "vba"]):
-                        return True, "Dangerous VBA Macro detected inside DOCX document."
+                    if lower_entry.endswith(".bin") and "vba" in lower_entry:
+                        return True, "Malicious embedded VBA macros detected in Word document."
         except zipfile.BadZipFile:
-            return True, "Corrupted or invalid DOCX archive structure."
+            return True, "Corrupted or non-standard DOCX archive."
 
     # 3. Inspect images for pixel bombs or payload tampering
     if ext in (".png", ".jpg", ".jpeg"):
@@ -123,10 +187,15 @@ def validate_file_magic_and_mime(file_bytes: bytes, filename: str) -> str:
             f"File extension '{ext}' is not permitted. Supported formats: {settings.ALLOWED_EXTENSIONS}"
         )
 
-    # Perform deep malicious payload scan
+    # Perform deep malicious payload scan (executables, macros, zip-slip, image bombs)
     is_malicious, reason = detect_malicious_content(file_bytes, ext)
     if is_malicious:
         raise SecurityValidationError(f"Security validation failed: {reason}")
+
+    # Antivirus / Malware signature scan (EICAR & ClamAV)
+    is_malware, malware_reason = scan_with_malware_engine(file_bytes, safe_name)
+    if is_malware:
+        raise SecurityValidationError(f"Security validation failed: {malware_reason}")
 
     # Validate exact magic bytes per extension
     if ext == ".pdf":

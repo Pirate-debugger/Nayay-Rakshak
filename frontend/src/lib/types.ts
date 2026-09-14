@@ -482,3 +482,195 @@ export interface ActionNavigatorResponse {
   disclaimer: string;
   generated_at: string;
 }
+
+// ── Additional Strongly Typed Models ───────────────────────────────────────
+
+export interface ChecklistItem {
+  id: string;
+  title: string;
+  description: string;
+  importance: 'CRITICAL' | 'HIGH' | 'STANDARD' | string;
+}
+
+export interface DocumentChecklistResponse {
+  title: string;
+  jurisdiction: string;
+  items: ChecklistItem[];
+}
+
+export type FindingType =
+  | 'DETERMINISTIC_RULE'
+  | 'AI_ASSISTED_PATTERN'
+  | 'CROSS_CLAUSE_CONFLICT'
+  | 'MISSING_STATUTORY_PROTECTION';
+
+export interface RiskEvidenceLocation {
+  page_number: number;
+  section_heading?: string;
+  verbatim_quote: string;
+  char_start?: number;
+  char_end?: number;
+}
+
+export interface RiskRecord {
+  risk_id: string;
+  category: string;
+  severity: RiskLevel | 'CRITICAL';
+  title: string;
+  finding: string;
+  plain_language_explanation: string;
+  why_it_matters: string;
+  evidence: RiskEvidenceLocation;
+  affected_party: string;
+  confidence: number;
+  recommended_question: string;
+  professional_review_recommended: boolean;
+  rule_id?: string;
+  rule_version?: string;
+  finding_type: FindingType;
+  statutory_cross_reference?: string;
+  is_camouflaged: boolean;
+}
+
+export interface RiskSummaryStats {
+  total_risks: number;
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  low_count: number;
+  overall_health_verdict: string;
+}
+
+export interface RiskRuleInfo {
+  rule_id: string;
+  version: string;
+  category: string;
+  default_severity: string;
+  title: string;
+  description: string;
+  statutory_reference?: string;
+}
+
+export interface RiskEngineResult {
+  document_id?: number;
+  engine_version: string;
+  ruleset_version: string;
+  summary: RiskSummaryStats;
+  risks: RiskRecord[];
+  missing_protections: RiskRecord[];
+  audit_trail: Array<Record<string, unknown>>;
+}
+
+export interface RetrievalFilter {
+  jurisdiction?: string;
+  allow_cross_jurisdiction?: boolean;
+  court?: string;
+  legal_domain?: string;
+  as_of_date?: string;
+  min_authority_tier?: string;
+  allowed_statuses?: string[];
+}
+
+export interface RetrievalCitationRecord {
+  source_id: string;
+  title: string;
+  authority: string;
+  authority_tier: string;
+  evidence_type: string;
+  section_or_page: string;
+  publication_date?: string;
+  effective_date?: string;
+  retrieval_timestamp: string;
+  url_or_reference: string;
+  supporting_text: string;
+  relevance_score: number;
+  provenance?: Record<string, unknown>;
+}
+
+export interface RetrievalResultItem {
+  item_id: string;
+  evidence_type: string;
+  tier: string;
+  title: string;
+  content: string;
+  citation: RetrievalCitationRecord;
+  keyword_score: number;
+  semantic_score: number;
+  tier_boost: number;
+  final_score: number;
+  jurisdiction: string;
+  effective_from?: string;
+  effective_to?: string;
+  status: string;
+}
+
+export interface RetrievalSearchResponse {
+  query: string;
+  classified_intent: string;
+  applied_filters: RetrievalFilter;
+  total_found: number;
+  has_authoritative_evidence: boolean;
+  explicit_unretrieved_disclaimer?: string;
+  user_document_items: RetrievalResultItem[];
+  legal_authority_items: RetrievalResultItem[];
+  secondary_items: RetrievalResultItem[];
+  reranked_items: RetrievalResultItem[];
+  evaluation_metrics?: Record<string, number>;
+}
+
+export interface AuthoritativeSourceRecord {
+  source_id: string;
+  title: string;
+  statute: string;
+  section: string;
+  domain: string;
+  jurisdiction: string;
+  status: string;
+  authority_tier: string;
+  description: string;
+  official_reference_url?: string;
+}
+
+export interface ClaimVerificationDetail {
+  claim_id: string;
+  claim_text: string;
+  verification_status: VerificationStatus;
+  confidence_score: number;
+  supporting_evidence: Array<{
+    source_title: string;
+    authority_tier: string;
+    verbatim_quote: string;
+    section_or_page?: string;
+    relevance: number;
+  }>;
+  contradicting_evidence: Array<{
+    source_title: string;
+    authority_tier: string;
+    verbatim_quote: string;
+    section_or_page?: string;
+  }>;
+  reasoning: string;
+  action_recommended?: string;
+}
+
+export interface VerificationMetrics {
+  total_claims: number;
+  supported_claims: number;
+  partially_supported_claims: number;
+  unsupported_claims: number;
+  conflicting_claims: number;
+  unverified_claims: number;
+  overall_grounding_score: number;
+}
+
+export interface ClaimVerificationPipelineResponse {
+  user_question: string;
+  draft_answer: string;
+  final_response: string;
+  safety_gate_action: string;
+  claims: ClaimVerificationDetail[];
+  metrics: VerificationMetrics;
+  citations_verified: string[];
+  citations_rejected: string[];
+  never_hallucination_free_compliance: boolean;
+}

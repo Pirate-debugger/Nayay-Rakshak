@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List, Optional
 
@@ -18,14 +19,16 @@ from sqlalchemy.future import select
 from app.api.deps import get_current_user
 from app.core.audit import log_audit_event
 from app.core.authorization import authorize_object_access
+from app.core.config import settings
 from app.core.exceptions import ObjectNotFoundError
 from app.core.file_security import (
     sanitize_filename,
     secure_delete_file,
     validate_file_magic_and_mime,
 )
+from app.core.rate_limit import limiter
 from app.core.roles import Action
-from app.db.base import get_db
+from app.db.base import AsyncSessionLocal, get_db
 from app.db.models import (
     Document,
     DocumentChunk,
@@ -37,17 +40,43 @@ from app.schemas.document import (
     DocumentResponse,
     DocumentStatusResponse,
 )
+from app.services.ai_cache import ai_cache_service
 from app.services.ingestion_pipeline import execute_document_ingestion
+
+logger = logging.getLogger("nyaya_rakshak.documents")
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
 
+async def _run_background_ingestion(
+    document_id: int,
+    file_bytes: bytes,
+    original_filename: str,
+    redact_pii: bool
+):
+    """Background worker task for non-blocking document ingestion."""
+    async with AsyncSessionLocal() as session:
+        try:
+            await execute_document_ingestion(
+                document_id=document_id,
+                file_bytes=file_bytes,
+                original_filename=original_filename,
+                db=session,
+                redact_pii=redact_pii
+            )
+        except Exception as e:
+            logger.error(f"Background ingestion worker failed for document {document_id}: {e}", exc_info=True)
+
+
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit(settings.RATE_LIMIT_UPLOAD)
 async def upload_document(
     request: Request,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     title: Optional[str] = Form(None),
     redact_pii: bool = Form(True),
+    async_processing: bool = Form(False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -71,7 +100,8 @@ async def upload_document(
 
     doc_title = title.strip() if title and title.strip() else os.path.splitext(safe_name)[0].replace("_", " ").title()
 
-    # Create document record in initial UPLOADED state
+    initial_status = "PROCESSING" if async_processing else "UPLOADED"
+    # Create document record
     # Notice: Client-supplied user_id is completely ignored; strictly assigned to current_user.id
     doc = Document(
         user_id=current_user.id,
@@ -82,13 +112,24 @@ async def upload_document(
         storage_path="",  # Will be set during quarantine/indexing
         page_count=1,
         pii_redacted=redact_pii,
-        status="UPLOADED"
+        status=initial_status
     )
     db.add(doc)
     await db.commit()
     await db.refresh(doc)
 
-    # Execute synchronous/inline processing pipeline (or in background if long-running)
+    # If non-blocking async worker processing requested
+    if async_processing:
+        background_tasks.add_task(
+            _run_background_ingestion,
+            doc.id,
+            contents,
+            safe_name,
+            redact_pii
+        )
+        return DocumentResponse.model_validate(doc)
+
+    # Synchronous processing pipeline
     ingest_result = await execute_document_ingestion(
         document_id=doc.id,
         file_bytes=contents,
@@ -304,6 +345,10 @@ async def delete_document(
     # Securely wipe physical file from disk
     if doc.storage_path:
         secure_delete_file(doc.storage_path)
+
+    # Purge sensitive AI cache entries associated with this document (privacy guarantee)
+    if doc.content_hash:
+        await ai_cache_service.evict_document(doc.content_hash, db=db)
 
     await db.delete(doc)
     await db.commit()

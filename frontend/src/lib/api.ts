@@ -1,36 +1,72 @@
 import {
   ActionNavigatorResponse,
   AnalysisResponse,
+  AuthoritativeSourceRecord,
   BriefResponse,
+  ChecklistItem,
+  ClaimVerificationPipelineResponse,
   ComparisonResponse,
+  DocumentChecklistResponse,
   DocumentDetail,
   DocumentMeta,
   EligibilityCheckResponse,
   GlossaryEntry,
   LegalAidResource,
   QAResponse,
+  RetrievalFilter,
+  RetrievalSearchResponse,
+  RiskEngineResult,
+  RiskRuleInfo,
+  StructuredClauseRecord,
   User,
   VerificationBatchResponse,
-  StructuredClauseRecord,
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
 
+let inMemoryToken: string | null = null;
+
 export function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('nyaya_auth_token');
+  if (inMemoryToken) return inMemoryToken;
+  if (typeof window !== 'undefined') {
+    return sessionStorage.getItem('nyaya_auth_token');
+  }
+  return null;
 }
 
 export function setAuthToken(token: string) {
+  inMemoryToken = token;
   if (typeof window !== 'undefined') {
-    localStorage.setItem('nyaya_auth_token', token);
+    sessionStorage.setItem('nyaya_auth_token', token);
   }
 }
 
 export function clearAuthToken() {
+  inMemoryToken = null;
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('nyaya_auth_token');
+    sessionStorage.removeItem('nyaya_auth_token');
   }
+}
+
+export async function initAuth(): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.access_token) {
+        setAuthToken(data.access_token);
+        return data.access_token;
+      }
+    }
+  } catch {
+    // No active session or refresh failed
+  }
+  return getAuthToken();
 }
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -43,6 +79,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   const res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
+    credentials: 'include',
     headers,
   });
 
@@ -159,10 +196,8 @@ export async function getDocumentAnalysis(documentId: number): Promise<AnalysisR
   return request<AnalysisResponse>(`/analysis/${documentId}`);
 }
 
-export async function getDocumentChecklist(documentId: number) {
-  return request<{ title: string; jurisdiction: string; items: Array<{ id: string; title: string; description: string; importance: string }> }>(
-    `/analysis/${documentId}/checklist`
-  );
+export async function getDocumentChecklist(documentId: number): Promise<DocumentChecklistResponse> {
+  return request<DocumentChecklistResponse>(`/analysis/${documentId}/checklist`);
 }
 
 export async function getStructuredClauses(documentId: number): Promise<{ document_id: number; clause_count: number; clauses: StructuredClauseRecord[] }> {
@@ -286,32 +321,32 @@ export async function getGlossary(query?: string): Promise<GlossaryEntry[]> {
 // NYAYA RAKSHAK - Advanced Subsystems API
 
 // 1. Risk Engine API
-export async function evaluateDocumentRisks(documentId: number): Promise<any> {
-  return request<any>(`/analysis/${documentId}/risk-engine`, {
+export async function evaluateDocumentRisks(documentId: number): Promise<RiskEngineResult> {
+  return request<RiskEngineResult>(`/analysis/${documentId}/risk-engine`, {
     method: 'POST',
   });
 }
 
-export async function evaluateTextRisks(text: string): Promise<any> {
-  return request<any>('/analysis/risk-engine/evaluate-text', {
+export async function evaluateTextRisks(text: string): Promise<RiskEngineResult> {
+  return request<RiskEngineResult>('/analysis/risk-engine/evaluate-text', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   });
 }
 
-export async function getRiskRules(): Promise<any[]> {
-  return request<any[]>('/analysis/risk-engine/rules');
+export async function getRiskRules(): Promise<RiskRuleInfo[]> {
+  return request<RiskRuleInfo[]>('/analysis/risk-engine/rules');
 }
 
 // 2. Evidence-First Legal Retrieval API
 export async function searchLegalEvidence(data: {
   query: string;
-  document_chunks?: any[];
-  custom_filters?: any;
+  document_chunks?: Array<Record<string, unknown>>;
+  custom_filters?: RetrievalFilter;
   top_k?: number;
-}): Promise<any> {
-  return request<any>('/retrieval/search', {
+}): Promise<RetrievalSearchResponse> {
+  return request<RetrievalSearchResponse>('/retrieval/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -324,22 +359,22 @@ export async function evaluateRetrievalQuality(): Promise<Record<string, number>
   });
 }
 
-export async function getAuthoritativeSources(domain?: string, jurisdiction?: string): Promise<any[]> {
+export async function getAuthoritativeSources(domain?: string, jurisdiction?: string): Promise<AuthoritativeSourceRecord[]> {
   const params = new URLSearchParams();
   if (domain) params.append('domain', domain);
   if (jurisdiction) params.append('jurisdiction', jurisdiction);
-  return request<any[]>(`/retrieval/sources?${params.toString()}`);
+  return request<AuthoritativeSourceRecord[]>(`/retrieval/sources?${params.toString()}`);
 }
 
 // 3. Claim Verification Pipeline API
 export async function verifyClaimsPipeline(data: {
   user_question: string;
   draft_answer?: string;
-  document_chunks?: any[];
+  document_chunks?: Array<Record<string, unknown>>;
   jurisdiction?: string;
   as_of_date?: string;
-}): Promise<any> {
-  return request<any>('/verification/pipeline', {
+}): Promise<ClaimVerificationPipelineResponse> {
+  return request<ClaimVerificationPipelineResponse>('/verification/pipeline', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),

@@ -50,8 +50,9 @@ export default function DashboardPage() {
       try {
         await deleteDocument(id);
         setDocuments(documents.filter((d) => d.id !== id));
-      } catch (err: any) {
-        alert(err.message || 'Failed to delete');
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to delete';
+        alert(message);
       }
     }
   };
@@ -63,8 +64,9 @@ export default function DashboardPage() {
       setDocuments([doc, ...documents]);
       setShowUploader(false);
       router.push(`/analyze?docId=${doc.id}`);
-    } catch (err: any) {
-      alert(err.message || 'Failed to load sample');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load sample';
+      alert(message);
     } finally {
       setSampleLoading(false);
     }
