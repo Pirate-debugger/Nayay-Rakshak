@@ -11,20 +11,17 @@ USER QUESTION
   → FINAL RESPONSE
 """
 
-from datetime import datetime, timezone
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import List, Optional, Tuple
 
 from app.schemas.retrieval import (
     EvidenceType,
-    QueryIntent,
     RetrievalFilter,
     RetrievalResponse,
     RetrievalResultItem,
-    SourceTier,
 )
 from app.schemas.verification import (
-    ClaimType,
     ClaimVerificationCheck,
     ClaimVerificationDetail,
     ClaimVerificationPipelineRequest,
@@ -42,36 +39,28 @@ from app.services.retrieval.retriever import legal_retriever
 class ClaimVerificationEngine:
     """Enterprise 8-Stage Claim Verification and Response Hardening Engine."""
 
-    def __init__(
-        self,
-        retriever=None,
-        extractor=None,
-        metrics_calc=None,
-        gate=None
-    ):
+    def __init__(self, retriever=None, extractor=None, metrics_calc=None, gate=None):
         self.retriever = retriever or legal_retriever
         self.extractor = extractor or claim_extractor
         self.metrics_calc = metrics_calc or verification_metrics_calculator
         self.gate = gate or safety_gate
 
     async def execute_pipeline(
-        self,
-        req: ClaimVerificationPipelineRequest
+        self, req: ClaimVerificationPipelineRequest
     ) -> ClaimVerificationPipelineResponse:
         """Runs the complete 8-stage pipeline."""
         # STAGE 1 & 2: USER QUESTION → RETRIEVAL
         custom_filters = None
         if req.jurisdiction or req.as_of_date:
             custom_filters = RetrievalFilter(
-                jurisdiction=req.jurisdiction,
-                as_of_date=req.as_of_date
+                jurisdiction=req.jurisdiction, as_of_date=req.as_of_date
             )
 
         retrieval_res: RetrievalResponse = await self.retriever.retrieve(
             query=req.user_question,
             document_chunks=req.document_chunks,
             custom_filters=custom_filters,
-            top_k=8
+            top_k=8,
         )
 
         # STAGE 3: DRAFT ANSWER
@@ -94,7 +83,7 @@ class ClaimVerificationEngine:
                 claim=claim,
                 all_evidence=all_evidence_items,
                 query_jurisdiction=retrieval_res.applied_filters.jurisdiction or "Union of India",
-                as_of_date=retrieval_res.applied_filters.as_of_date
+                as_of_date=retrieval_res.applied_filters.as_of_date,
             )
             verified_details.append(detail)
             verified_citations.extend(v_cites)
@@ -108,13 +97,12 @@ class ClaimVerificationEngine:
         metrics: VerificationMetrics = self.metrics_calc.compute_metrics(
             claims=verified_details,
             verified_citations=verified_citations,
-            rejected_citations=rejected_citations
+            rejected_citations=rejected_citations,
         )
 
         # STAGE 7: SAFETY GATE
         final_response, safety_gate_action, compliance = self.gate.gate_and_finalize(
-            draft_answer=draft_answer,
-            claims=verified_details
+            draft_answer=draft_answer, claims=verified_details
         )
 
         # STAGE 8: FINAL RESPONSE
@@ -127,7 +115,7 @@ class ClaimVerificationEngine:
             metrics=metrics,
             citations_verified=verified_citations,
             citations_rejected=rejected_citations,
-            never_hallucination_free_compliance=compliance
+            never_hallucination_free_compliance=compliance,
         )
 
     def _verify_single_claim(
@@ -135,7 +123,7 @@ class ClaimVerificationEngine:
         claim: ExtractedClaim,
         all_evidence: List[RetrievalResultItem],
         query_jurisdiction: str,
-        as_of_date: Optional[datetime]
+        as_of_date: Optional[datetime],
     ) -> Tuple[ClaimVerificationDetail, List[str], List[str]]:
         """
         Executes the 6-Check Verification on a single claim:
@@ -154,7 +142,15 @@ class ClaimVerificationEngine:
         claim_lower = claim.claim_text.lower()
 
         # Check 1: Candidate evidence identification
-        c_words = set(re.findall(r"\w+", claim_lower)) - {"the", "and", "under", "for", "that", "this", "with"}
+        c_words = set(re.findall(r"\w+", claim_lower)) - {
+            "the",
+            "and",
+            "under",
+            "for",
+            "that",
+            "this",
+            "with",
+        }
 
         for ev in all_evidence:
             ev_text_lower = f"{ev.title} {ev.content}".lower()
@@ -177,10 +173,16 @@ class ClaimVerificationEngine:
         is_conflicting = False
         if check_1_found and best_match:
             # Check for direct contradictions (e.g. claim says 'non-refundable' but statute says 'must be refunded')
-            if ("non-refundable" in claim_lower or "forfeit" in claim_lower) and ("refund" in best_match.content.lower() or "deposit shall be refunded" in best_match.content.lower()):
+            if ("non-refundable" in claim_lower or "forfeit" in claim_lower) and (
+                "refund" in best_match.content.lower()
+                or "deposit shall be refunded" in best_match.content.lower()
+            ):
                 is_conflicting = True
                 comparison_reason = "Direct conflict: Claim stipulates forfeiture or non-refundability, but governing legal authority mandates deposit refund."
-            elif ("unilateral" in claim_lower or "at sole discretion" in claim_lower) and ("unfair contract" in best_match.content.lower() or "not have the power" in best_match.content.lower()):
+            elif ("unilateral" in claim_lower or "at sole discretion" in claim_lower) and (
+                "unfair contract" in best_match.content.lower()
+                or "not have the power" in best_match.content.lower()
+            ):
                 is_conflicting = True
                 comparison_reason = "Direct conflict: Claim asserts unilateral prerogative, but statutory authority classifies unilateral terms as unfair."
             elif best_score >= 0.5:
@@ -188,7 +190,9 @@ class ClaimVerificationEngine:
             else:
                 comparison_reason = f"Partial overlap ({best_score:.2f}) with {best_match.title}."
         else:
-            comparison_reason = "No authoritative documentary or statutory evidence matches this claim."
+            comparison_reason = (
+                "No authoritative documentary or statutory evidence matches this claim."
+            )
 
         # Check 3: Source authority check
         source_authority_desc = "None"
@@ -199,13 +203,23 @@ class ClaimVerificationEngine:
         jurisdiction_match = True
         if query_jurisdiction != "Union of India":
             # Check if claim text itself references a conflicting state
-            for state_name in ["maharashtra", "delhi", "karnataka", "tamil nadu", "west bengal", "gujarat"]:
+            for state_name in [
+                "maharashtra",
+                "delhi",
+                "karnataka",
+                "tamil nadu",
+                "west bengal",
+                "gujarat",
+            ]:
                 if state_name in claim_lower and state_name not in query_jurisdiction.lower():
                     jurisdiction_match = False
                     comparison_reason += f" [JURISDICTION MISMATCH: Claim refers to {state_name.title()} while query applies to {query_jurisdiction}]."
             # Check if matched evidence source is from a conflicting state
             if check_1_found and best_match:
-                if best_match.jurisdiction != "Union of India" and best_match.jurisdiction != query_jurisdiction:
+                if (
+                    best_match.jurisdiction != "Union of India"
+                    and best_match.jurisdiction != query_jurisdiction
+                ):
                     jurisdiction_match = False
                     comparison_reason += f" [JURISDICTION MISMATCH: Source is {best_match.jurisdiction} but query applies to {query_jurisdiction}]."
 
@@ -213,7 +227,7 @@ class ClaimVerificationEngine:
         temporal_valid = True
         if as_of_date:
             # Check if claim cites repealed statutes (e.g. IPC after July 1, 2024)
-            if ("ipc" in claim_lower or "indian penal code" in claim_lower or "420" in claim_lower):
+            if "ipc" in claim_lower or "indian penal code" in claim_lower or "420" in claim_lower:
                 ipc_item = source_registry.get("IPC-1860-SEC-420")
                 if ipc_item and not ipc_item.is_valid_as_of(as_of_date):
                     temporal_valid = False
@@ -232,7 +246,10 @@ class ClaimVerificationEngine:
             else:
                 # Potential fabricated or unverified case/statute/clause!
                 ref_lower = ref.lower()
-                if any(k in ref_lower for k in ["v.", "vs.", "act", "sanhita", "code", "section", "scc"]):
+                if any(
+                    k in ref_lower
+                    for k in ["v.", "vs.", "act", "sanhita", "code", "section", "scc"]
+                ):
                     r_cites.append(ref)
 
         # Check 6: Support status determination
@@ -255,7 +272,7 @@ class ClaimVerificationEngine:
             check_3_source_authority=source_authority_desc,
             check_4_jurisdiction_match=jurisdiction_match,
             check_5_temporal_validity=temporal_valid,
-            check_6_status_determined=status
+            check_6_status_determined=status,
         )
 
         detail = ClaimVerificationDetail(
@@ -268,7 +285,7 @@ class ClaimVerificationEngine:
             matched_evidence_snippet=best_match.content[:200].strip() if best_match else None,
             matched_source_url=best_match.citation.url_or_reference if best_match else None,
             confidence_score=conf_score,
-            explanation=comparison_reason
+            explanation=comparison_reason,
         )
 
         return detail, v_cites, r_cites
@@ -276,7 +293,7 @@ class ClaimVerificationEngine:
     def _check_citation_validity(self, ref: str, source_list, evidence_list) -> bool:
         """Validates whether a cited statute, case, or clause exists in the official registry or document."""
         ref_lower = ref.lower().strip()
-        
+
         # 1. Check against registered statutory sources
         for s in source_list:
             s_title_lower = s.title.lower()

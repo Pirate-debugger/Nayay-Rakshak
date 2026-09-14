@@ -6,7 +6,7 @@ def generate_citizen_brief(
     document_title: str,
     client_name: str,
     analysis_data: Dict,
-    custom_questions: Optional[List[str]] = None
+    custom_questions: Optional[List[str]] = None,
 ) -> Dict:
     """
     Generate a structured, professional briefing memo designed for citizen consultation with a legal advocate.
@@ -17,13 +17,16 @@ def generate_citizen_brief(
 
     key_issues = [r.get("title", "") for r in risks[:5] if r.get("title")]
     if not key_issues:
-        key_issues = ["General contract term review", "Notice period and termination terms clarification"]
+        key_issues = [
+            "General contract term review",
+            "Notice period and termination terms clarification",
+        ]
 
     default_questions = [
         "Are the late payment interest rates and penalty terms in this contract legally enforceable in court?",
         "Can the counterparty unilaterally terminate this agreement without assigning valid cause?",
         "Does the dispute resolution clause prevent me from accessing the local consumer forum or civil court?",
-        "What specific amendments or addenda should I insist on before signing or agreeing to these terms?"
+        "What specific amendments or addenda should I insist on before signing or agreeing to these terms?",
     ]
     if custom_questions:
         default_questions.extend(custom_questions)
@@ -45,12 +48,16 @@ def generate_citizen_brief(
         md_lines.append(f"### {i}. {r.get('title', 'Risk Item')} ({r.get('severity', 'MEDIUM')})")
         md_lines.append(f"- **Description:** {r.get('description', '')}")
         md_lines.append(f"- **Contract Reference:** {r.get('clause_reference', 'General')}")
-        md_lines.append(f"- **Suggested Countermeasure:** {r.get('countermeasure', 'Seek legal advice')}")
+        md_lines.append(
+            f"- **Suggested Countermeasure:** {r.get('countermeasure', 'Seek legal advice')}"
+        )
 
     if missing:
         md_lines.append("\n## 3. Absent Protective Clauses (Missing Safeguards)")
         for m in missing:
-            md_lines.append(f"- **{m.get('clause_name', '')}**: {m.get('why_needed', '')} *(Suggested: {m.get('suggested_language', '')})*")
+            md_lines.append(
+                f"- **{m.get('clause_name', '')}**: {m.get('why_needed', '')} *(Suggested: {m.get('suggested_language', '')})*"
+            )
 
     md_lines.append("\n## 4. Key Questions to Ask Your Advocate")
     for q in default_questions:
@@ -70,5 +77,5 @@ def generate_citizen_brief(
         "client_name": client_name,
         "brief_markdown": full_markdown,
         "key_issues": key_issues,
-        "questions_for_lawyer": default_questions
+        "questions_for_lawyer": default_questions,
     }

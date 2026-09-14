@@ -59,6 +59,7 @@ def _date_consequence(context: str) -> str:
 
 # ─── Known Fact Extractor ─────────────────────────────────────────────────────
 
+
 def extract_known_facts(
     clauses: List[Dict[str, Any]],
     obligations: List[Dict[str, Any]],
@@ -88,36 +89,42 @@ def extract_known_facts(
             key = m.group(0).strip()
             if key not in seen:
                 seen.add(key)
-                facts.append(FactItem(
-                    fact=f"The document specifies an amount of {key} in the context of {category}.",
-                    source=cid,
-                    confidence=0.95,
-                    category="Financial",
-                ))
+                facts.append(
+                    FactItem(
+                        fact=f"The document specifies an amount of {key} in the context of {category}.",
+                        source=cid,
+                        confidence=0.95,
+                        category="Financial",
+                    )
+                )
 
         # Percentages
         for m in percent_re.finditer(text):
             key = f"{m.group(0)} in {category}"
             if key not in seen:
                 seen.add(key)
-                facts.append(FactItem(
-                    fact=f"A rate of {m.group(0)} is specified in the {category} clause.",
-                    source=cid,
-                    confidence=0.90,
-                    category="Financial",
-                ))
+                facts.append(
+                    FactItem(
+                        fact=f"A rate of {m.group(0)} is specified in the {category} clause.",
+                        source=cid,
+                        confidence=0.90,
+                        category="Financial",
+                    )
+                )
 
         # Durations
         for m in duration_re.finditer(text):
             key = f"{m.group(0)} in {category}"
             if key not in seen:
                 seen.add(key)
-                facts.append(FactItem(
-                    fact=f"A period of {m.group(1)} {m.group(2)} is stated in the {category} clause.",
-                    source=cid,
-                    confidence=0.88,
-                    category="Duration",
-                ))
+                facts.append(
+                    FactItem(
+                        fact=f"A period of {m.group(1)} {m.group(2)} is stated in the {category} clause.",
+                        source=cid,
+                        confidence=0.88,
+                        category="Duration",
+                    )
+                )
 
     # 2. From obligations
     for ob in obligations:
@@ -129,23 +136,26 @@ def extract_known_facts(
             key = f"{party}:{action}"
             if key not in seen:
                 seen.add(key)
-                facts.append(FactItem(
-                    fact=f"{party} is obligated to: {action}"
-                         + (f" (Frequency/Deadline: {deadline})" if deadline else ""),
-                    source=oid,
-                    confidence=0.92,
-                    category="Obligation",
-                ))
+                facts.append(
+                    FactItem(
+                        fact=f"{party} is obligated to: {action}"
+                        + (f" (Frequency/Deadline: {deadline})" if deadline else ""),
+                        source=oid,
+                        confidence=0.92,
+                        category="Obligation",
+                    )
+                )
 
     return facts[:20]  # Cap to avoid overwhelming output
 
 
 # ─── Unknown Fact Extractor ───────────────────────────────────────────────────
 
+
 def extract_unknown_facts(
     risks: List[Dict[str, Any]],
     missing_clauses: List[Dict[str, Any]],
-    risk_records: List[Any],   # RiskRecord objects
+    risk_records: List[Any],  # RiskRecord objects
 ) -> List[FactItem]:
     """
     Surface things the document does NOT clearly establish, or that are ambiguous.
@@ -162,13 +172,14 @@ def extract_unknown_facts(
         if name and name not in seen:
             seen.add(name)
             conf = 0.95 if importance == "CRITICAL" else 0.80
-            unknowns.append(FactItem(
-                fact=f"The document does not include a {name} clause. "
-                     f"This means: {why}",
-                source="missing_clauses",
-                confidence=conf,
-                category="Missing Protection",
-            ))
+            unknowns.append(
+                FactItem(
+                    fact=f"The document does not include a {name} clause. This means: {why}",
+                    source="missing_clauses",
+                    confidence=conf,
+                    category="Missing Protection",
+                )
+            )
 
     # From AI analysis risks (ambiguity category)
     for r in risks:
@@ -177,13 +188,14 @@ def extract_unknown_facts(
             title = r.get("title", r.get("description", ""))
             if title and title not in seen:
                 seen.add(title)
-                unknowns.append(FactItem(
-                    fact=f"Ambiguity / gap identified: {title}. "
-                         f"{r.get('countermeasure', '')}",
-                    source=r.get("risk_id", "?"),
-                    confidence=0.75,
-                    category=cat,
-                ))
+                unknowns.append(
+                    FactItem(
+                        fact=f"Ambiguity / gap identified: {title}. {r.get('countermeasure', '')}",
+                        source=r.get("risk_id", "?"),
+                        confidence=0.75,
+                        category=cat,
+                    )
+                )
 
     # From risk engine AMBIGUITY records
     for rr in risk_records:
@@ -193,12 +205,14 @@ def extract_unknown_facts(
             title = getattr(rr, "title", "")
             if title and title not in seen:
                 seen.add(title)
-                unknowns.append(FactItem(
-                    fact=f"Unclear or absent provision: {title}",
-                    source=getattr(rr, "risk_id", "?"),
-                    confidence=getattr(rr, "confidence", 0.75),
-                    category=cat_val,
-                ))
+                unknowns.append(
+                    FactItem(
+                        fact=f"Unclear or absent provision: {title}",
+                        source=getattr(rr, "risk_id", "?"),
+                        confidence=getattr(rr, "confidence", 0.75),
+                        category=cat_val,
+                    )
+                )
 
     return unknowns[:15]
 
@@ -281,9 +295,7 @@ def extract_important_documents(
     found: List[ImportantDocumentItem] = []
     used_names: set[str] = set()
 
-    all_text = " ".join(
-        c.get("original_text", "").lower() for c in clauses
-    ) + " ".join(
+    all_text = " ".join(c.get("original_text", "").lower() for c in clauses) + " ".join(
         o.get("action", "").lower() for o in obligations
     )
 
@@ -292,28 +304,34 @@ def extract_important_documents(
             name = trigger["document_name"]
             if name not in used_names:
                 used_names.add(name)
-                found.append(ImportantDocumentItem(
-                    document_name=name,
-                    why_needed=trigger["why_needed"],
-                    urgency=trigger["urgency"],
-                    consequence_if_missing=trigger["consequence_if_missing"],
-                    source="clause_text_match",
-                ))
+                found.append(
+                    ImportantDocumentItem(
+                        document_name=name,
+                        why_needed=trigger["why_needed"],
+                        urgency=trigger["urgency"],
+                        consequence_if_missing=trigger["consequence_if_missing"],
+                        source="clause_text_match",
+                    )
+                )
 
     # Always include the agreement itself
     if "Signed Copy of This Agreement" not in used_names:
-        found.insert(0, ImportantDocumentItem(
-            document_name="Signed Copy of This Agreement",
-            why_needed="Keep a fully executed copy with all parties' signatures as your primary legal record.",
-            urgency=UrgencyLevel.HIGH,
-            consequence_if_missing="Without a signed original, proving the agreed terms may be difficult.",
-            source="always_required",
-        ))
+        found.insert(
+            0,
+            ImportantDocumentItem(
+                document_name="Signed Copy of This Agreement",
+                why_needed="Keep a fully executed copy with all parties' signatures as your primary legal record.",
+                urgency=UrgencyLevel.HIGH,
+                consequence_if_missing="Without a signed original, proving the agreed terms may be difficult.",
+                source="always_required",
+            ),
+        )
 
     return found
 
 
 # ─── Important Date Extractor ─────────────────────────────────────────────────
+
 
 def extract_important_dates(
     clauses: List[Dict[str, Any]],
@@ -332,13 +350,15 @@ def extract_important_dates(
             key = f"{action}:{deadline}"
             if key not in seen:
                 seen.add(key)
-                dates.append(ImportantDateItem(
-                    date_description=f"{action} — Deadline/Frequency",
-                    estimated_date=deadline,
-                    consequence=_date_consequence(action + " " + deadline),
-                    urgency=UrgencyLevel.MEDIUM,
-                    source=oid,
-                ))
+                dates.append(
+                    ImportantDateItem(
+                        date_description=f"{action} — Deadline/Frequency",
+                        estimated_date=deadline,
+                        consequence=_date_consequence(action + " " + deadline),
+                        urgency=UrgencyLevel.MEDIUM,
+                        source=oid,
+                    )
+                )
 
     # From clause text: regex-extracted dates
     for clause in clauses:
@@ -353,14 +373,16 @@ def extract_important_dates(
                 key = f"{cid}:{date_str}"
                 if key not in seen:
                     seen.add(key)
-                    ctx = text[max(0, m.start() - 40): m.end() + 40]
-                    dates.append(ImportantDateItem(
-                        date_description=f"{category} clause date",
-                        estimated_date=date_str,
-                        consequence=_date_consequence(ctx),
-                        urgency=UrgencyLevel.MEDIUM,
-                        source=cid,
-                    ))
+                    ctx = text[max(0, m.start() - 40) : m.end() + 40]
+                    dates.append(
+                        ImportantDateItem(
+                            date_description=f"{category} clause date",
+                            estimated_date=date_str,
+                            consequence=_date_consequence(ctx),
+                            urgency=UrgencyLevel.MEDIUM,
+                            source=cid,
+                        )
+                    )
 
         # Relative durations
         for pat in _DURATION_PATTERNS:
@@ -368,13 +390,15 @@ def extract_important_dates(
                 key = f"{cid}:{m.group(0)}"
                 if key not in seen:
                     seen.add(key)
-                    dates.append(ImportantDateItem(
-                        date_description=f"{category} — {m.group(0).strip()}",
-                        estimated_date=m.group(0).strip(),
-                        consequence=_date_consequence(text),
-                        urgency=UrgencyLevel.MEDIUM,
-                        source=cid,
-                    ))
+                    dates.append(
+                        ImportantDateItem(
+                            date_description=f"{category} — {m.group(0).strip()}",
+                            estimated_date=m.group(0).strip(),
+                            consequence=_date_consequence(text),
+                            urgency=UrgencyLevel.MEDIUM,
+                            source=cid,
+                        )
+                    )
 
     # Deduplicate by date_description+estimated_date, keep most unique
     return dates[:12]

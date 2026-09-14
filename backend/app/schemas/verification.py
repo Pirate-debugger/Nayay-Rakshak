@@ -23,12 +23,24 @@ class ClaimType(str, Enum):
 
 class ClaimVerificationCheck(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    check_1_evidence_found: bool = Field(..., description="Check 1: Was candidate evidence retrieved?")
-    check_2_claim_evidence_comparison: str = Field(..., description="Check 2: Detailed comparison of claim vs retrieved evidence text")
-    check_3_source_authority: str = Field(..., description="Check 3: Authority tier/credibility of matching source")
-    check_4_jurisdiction_match: bool = Field(..., description="Check 4: Does source jurisdiction match query jurisdiction?")
-    check_5_temporal_validity: bool = Field(..., description="Check 5: Was source active at the relevant date?")
-    check_6_status_determined: VerificationStatus = Field(..., description="Check 6: Final support status")
+    check_1_evidence_found: bool = Field(
+        ..., description="Check 1: Was candidate evidence retrieved?"
+    )
+    check_2_claim_evidence_comparison: str = Field(
+        ..., description="Check 2: Detailed comparison of claim vs retrieved evidence text"
+    )
+    check_3_source_authority: str = Field(
+        ..., description="Check 3: Authority tier/credibility of matching source"
+    )
+    check_4_jurisdiction_match: bool = Field(
+        ..., description="Check 4: Does source jurisdiction match query jurisdiction?"
+    )
+    check_5_temporal_validity: bool = Field(
+        ..., description="Check 5: Was source active at the relevant date?"
+    )
+    check_6_status_determined: VerificationStatus = Field(
+        ..., description="Check 6: Final support status"
+    )
 
 
 class ClaimVerificationDetail(BaseModel):
@@ -42,15 +54,23 @@ class ClaimVerificationDetail(BaseModel):
     matched_evidence_snippet: Optional[str] = None
     matched_source_url: Optional[str] = None
     confidence_score: float = Field(..., ge=0.0, le=1.0)
-    hedged_text: Optional[str] = Field(None, description="Hedged or corrected phrasing if unsupported/conflicting")
+    hedged_text: Optional[str] = Field(
+        None, description="Hedged or corrected phrasing if unsupported/conflicting"
+    )
     explanation: str
 
 
 class VerificationMetrics(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    evidence_coverage: float = Field(..., ge=0.0, le=1.0, description="(Supported + 0.5*PartiallySupported) / TotalClaims")
-    unsupported_claim_rate: float = Field(..., ge=0.0, le=1.0, description="(Unsupported + Conflicting) / TotalClaims")
-    citation_validity_rate: float = Field(..., ge=0.0, le=1.0, description="ValidCitations / TotalCitedSources")
+    evidence_coverage: float = Field(
+        ..., ge=0.0, le=1.0, description="(Supported + 0.5*PartiallySupported) / TotalClaims"
+    )
+    unsupported_claim_rate: float = Field(
+        ..., ge=0.0, le=1.0, description="(Unsupported + Conflicting) / TotalClaims"
+    )
+    citation_validity_rate: float = Field(
+        ..., ge=0.0, le=1.0, description="ValidCitations / TotalCitedSources"
+    )
     total_claims: int
     supported_count: int
     partially_supported_count: int
@@ -88,7 +108,11 @@ class ClaimVerificationPipelineRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     user_question: str = Field(..., min_length=2, max_length=1000)
     document_chunks: Optional[List[Dict[str, Any]]] = None
-    draft_answer: Optional[str] = Field(None, max_length=10000, description="Optional draft answer. If omitted, synthesized from retrieval.")
+    draft_answer: Optional[str] = Field(
+        None,
+        max_length=10000,
+        description="Optional draft answer. If omitted, synthesized from retrieval.",
+    )
     jurisdiction: Optional[str] = Field(None, max_length=100)
     as_of_date: Optional[datetime] = None
 
@@ -105,6 +129,5 @@ class ClaimVerificationPipelineResponse(BaseModel):
     citations_rejected: List[str]
     never_hallucination_free_compliance: bool = Field(
         True,
-        description="Confirms that no false claims of zero hallucination or infallible legal accuracy exist."
+        description="Confirms that no false claims of zero hallucination or infallible legal accuracy exist.",
     )
-

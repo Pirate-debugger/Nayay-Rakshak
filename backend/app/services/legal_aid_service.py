@@ -19,9 +19,9 @@ LEGAL_AID_RESOURCES: List[LegalAidResource] = [
             "Free advocate appointment in Supreme Court, High Courts, and Subordinate Courts",
             "Payment of court fees, process fees, and advocate charges",
             "Free supply of certified copies and translation of legal documents",
-            "Pre-litigation mediation and settlement"
+            "Pre-litigation mediation and settlement",
         ],
-        physical_address="B-Block, Additional Building Complex, Supreme Court of India, New Delhi - 110001"
+        physical_address="B-Block, Additional Building Complex, Supreme Court of India, New Delhi - 110001",
     ),
     LegalAidResource(
         id="DSLSA-DEL",
@@ -34,9 +34,9 @@ LEGAL_AID_RESOURCES: List[LegalAidResource] = [
         services_offered=[
             "District Legal Services Clinics across all Delhi Court complexes (Tis Hazari, Saket, Patiala House, Karkardooma, Rohini, Dwarka)",
             "Free representation in rent, civil, matrimonial, and criminal disputes",
-            "Permanent Lok Adalats for public utility disputes"
+            "Permanent Lok Adalats for public utility disputes",
         ],
-        physical_address="Central Office, Rouse Avenue Court Complex, Pandit Deen Dayal Upadhyaya Marg, New Delhi - 110002"
+        physical_address="Central Office, Rouse Avenue Court Complex, Pandit Deen Dayal Upadhyaya Marg, New Delhi - 110002",
     ),
     LegalAidResource(
         id="KSLSA-BLR",
@@ -49,9 +49,9 @@ LEGAL_AID_RESOURCES: List[LegalAidResource] = [
         services_offered=[
             "Free advocate representation in High Court of Karnataka and District Courts",
             "Pre-litigation counseling for employment and tenant disputes",
-            "Lok Adalat settlement facilitation"
+            "Lok Adalat settlement facilitation",
         ],
-        physical_address="Nyaya Degula, 1st Floor, Siddaiah Road, Bangalore - 560027"
+        physical_address="Nyaya Degula, 1st Floor, Siddaiah Road, Bangalore - 560027",
     ),
     LegalAidResource(
         id="MSLSA-MUM",
@@ -64,9 +64,9 @@ LEGAL_AID_RESOURCES: List[LegalAidResource] = [
         services_offered=[
             "Free counsel panel for civil, tenancy, and criminal trials",
             "Lok Adalat dispute resolution",
-            "Legal aid clinics in prisons and talukas"
+            "Legal aid clinics in prisons and talukas",
         ],
-        physical_address="P.W.D. Building, High Court Personnel Dept, Fort, Mumbai - 400032"
+        physical_address="P.W.D. Building, High Court Personnel Dept, Fort, Mumbai - 400032",
     ),
     LegalAidResource(
         id="TELE-LAW",
@@ -79,8 +79,8 @@ LEGAL_AID_RESOURCES: List[LegalAidResource] = [
         services_offered=[
             "Free pre-litigation legal advice from panel lawyers",
             "Multilingual consultation (Hindi, English, regional languages)",
-            "Referral to DLSA if formal litigation is needed"
-        ]
+            "Referral to DLSA if formal litigation is needed",
+        ],
     ),
     LegalAidResource(
         id="NCH-CONS",
@@ -93,8 +93,8 @@ LEGAL_AID_RESOURCES: List[LegalAidResource] = [
         services_offered=[
             "Instant registration of consumer grievances against service providers and sellers",
             "Pre-litigation mediation with registered convergence companies",
-            "Guidance for filing on e-Daakhil (online consumer commission)"
-        ]
+            "Guidance for filing on e-Daakhil (online consumer commission)",
+        ],
     ),
     LegalAidResource(
         id="EDAAKHIL",
@@ -107,8 +107,8 @@ LEGAL_AID_RESOURCES: List[LegalAidResource] = [
         services_offered=[
             "Online complaint submission and digital evidence upload",
             "Online payment of nominal consumer court fees",
-            "Digital case status tracking and order downloads"
-        ]
+            "Digital case status tracking and order downloads",
+        ],
     ),
     LegalAidResource(
         id="CYBER-1930",
@@ -121,9 +121,9 @@ LEGAL_AID_RESOURCES: List[LegalAidResource] = [
         services_offered=[
             "Immediate freezing of stolen funds in transit (within Golden Hour)",
             "Registration of formal cyber FIR",
-            "Assistance with digital evidence documentation"
-        ]
-    )
+            "Assistance with digital evidence documentation",
+        ],
+    ),
 ]
 
 STATE_INCOME_LIMITS: Dict[str, float] = {
@@ -133,8 +133,9 @@ STATE_INCOME_LIMITS: Dict[str, float] = {
     "tamil nadu": 300000.0,
     "uttar pradesh": 300000.0,
     "west bengal": 300000.0,
-    "default": 300000.0
+    "default": 300000.0,
 }
+
 
 def evaluate_free_legal_aid_eligibility(req: EligibilityCheckRequest) -> EligibilityCheckResponse:
     reasons = []
@@ -145,11 +146,15 @@ def evaluate_free_legal_aid_eligibility(req: EligibilityCheckRequest) -> Eligibi
     # Statutory entitlements under Section 12 of Legal Services Authorities Act, 1987
     if req.is_woman_or_child:
         eligible = True
-        reasons.append("Entitled as a Woman or Child under Section 12(c) of the Legal Services Authorities Act, 1987, irrespective of income.")
+        reasons.append(
+            "Entitled as a Woman or Child under Section 12(c) of the Legal Services Authorities Act, 1987, irrespective of income."
+        )
 
     if req.is_sc_or_st:
         eligible = True
-        reasons.append("Entitled as a member of Scheduled Caste (SC) or Scheduled Tribe (ST) under Section 12(a).")
+        reasons.append(
+            "Entitled as a member of Scheduled Caste (SC) or Scheduled Tribe (ST) under Section 12(a)."
+        )
 
     if req.is_disabled:
         eligible = True
@@ -183,7 +188,7 @@ def evaluate_free_legal_aid_eligibility(req: EligibilityCheckRequest) -> Eligibi
         "Income certificate (if applying under the income criteria)",
         "Category certificate (if applying under SC/ST or Disability criteria)",
         "Copy of the legal document, notice, or agreement in dispute",
-        "Chronological timeline of key events and communications"
+        "Chronological timeline of key events and communications",
     ]
 
     return EligibilityCheckResponse(
@@ -193,5 +198,5 @@ def evaluate_free_legal_aid_eligibility(req: EligibilityCheckRequest) -> Eligibi
         eligibility_reasons=reasons,
         annual_income_limit_for_state=income_limit,
         recommended_authorities=LEGAL_AID_RESOURCES[:4],
-        action_checklist=checklist
+        action_checklist=checklist,
     )

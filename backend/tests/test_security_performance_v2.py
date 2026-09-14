@@ -1,11 +1,10 @@
-import asyncio
-import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
+
 from app.ai.gemini_provider import GeminiProvider
 from app.core.audit import _sanitize_details_recursive
-from app.core.config import Settings, settings
+from app.core.config import settings
 from app.core.file_security import detect_malicious_content
 from app.core.rate_limit import create_limiter
 from app.main import ALLOWED_CORS_HEADERS, ALLOWED_CORS_METHODS
@@ -120,10 +119,7 @@ def test_audit_logging_scrubs_all_credentials():
         "refresh_token": "d7a8b9c0...",
         "cookie": "session=xyz123",
         "authorization": "Bearer token123",
-        "nested": {
-            "password": "SuperSecretPassword123!",
-            "normal_field": "public legal question"
-        }
+        "nested": {"password": "SuperSecretPassword123!", "normal_field": "public legal question"},
     }
     sanitized = _sanitize_details_recursive(sample_details)
 
@@ -138,13 +134,15 @@ def test_audit_logging_scrubs_all_credentials():
 
 def test_malware_detection_eicar_signature():
     """Verify malware engine detects standard EICAR test file and flags it as malicious."""
-    eicar = b'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
+    eicar = b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
     is_malicious, reason = detect_malicious_content(eicar, ".txt")
     assert is_malicious is True
     assert "EICAR" in reason
 
     # Clean text should pass
-    clean_text = b"This is a standard residential lease agreement executed between Landlord and Tenant."
+    clean_text = (
+        b"This is a standard residential lease agreement executed between Landlord and Tenant."
+    )
     is_clean, _ = detect_malicious_content(clean_text, ".txt")
     assert is_clean is False
 
@@ -165,7 +163,12 @@ async def test_gemini_provider_non_blocking_execution_and_structured_qa():
     )
     provider.model.generate_content.return_value = mock_response
 
-    chunks = [{"page_number": 1, "clean_content": "Clause 5: Either party may terminate with 30 days notice."}]
+    chunks = [
+        {
+            "page_number": 1,
+            "clean_content": "Clause 5: Either party may terminate with 30 days notice.",
+        }
+    ]
     result = await provider.answer_question("What is the termination notice period?", chunks)
 
     assert result["is_found_in_document"] is True

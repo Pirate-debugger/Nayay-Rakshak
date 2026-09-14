@@ -14,10 +14,10 @@ from app.schemas.risk import (
 )
 from app.services.risk_engine import risk_engine, risk_rule_registry
 
-
 # =====================================================================
 # 1. POSITIVE DETERMINISTIC TESTS ACROSS ALL 13 CATEGORIES
 # =====================================================================
+
 
 @pytest.mark.asyncio
 async def test_unlimited_liability_rule():
@@ -56,12 +56,17 @@ async def test_short_notice_period_rule():
     assert len(risks) >= 1
     r = [x for x in risks if x.rule_id == "RULE-TIM-001"][0]
     assert r.severity == RiskSeverity.HIGH
-    assert "48 hours" in r.evidence.verbatim_quote.lower() or "immediate" in r.evidence.verbatim_quote.lower()
+    assert (
+        "48 hours" in r.evidence.verbatim_quote.lower()
+        or "immediate" in r.evidence.verbatim_quote.lower()
+    )
 
 
 @pytest.mark.asyncio
 async def test_unreasonable_cure_period_rule():
-    text = "Any default must be remedied immediately without any cure period or opportunity to cure."
+    text = (
+        "Any default must be remedied immediately without any cure period or opportunity to cure."
+    )
     res = await risk_engine.analyze_document_risks(text)
     risks = [r for r in res.risks if r.rule_id == "RULE-TIM-002"]
     assert len(risks) == 1
@@ -73,7 +78,9 @@ async def test_unreasonable_cure_period_rule():
 async def test_uncapped_indemnity_rule():
     text = "The Lessee agrees to solely indemnify and hold harmless the Lessor against all claims, consequential and indirect damages without limit."
     res = await risk_engine.analyze_document_risks(text)
-    risks = [r for r in res.risks if r.category == RiskCategory.INDEMNITY and r.rule_id == "RULE-IND-001"]
+    risks = [
+        r for r in res.risks if r.category == RiskCategory.INDEMNITY and r.rule_id == "RULE-IND-001"
+    ]
     assert len(risks) >= 1
     assert risks[0].severity == RiskSeverity.HIGH
     assert "indemnif" in risks[0].evidence.verbatim_quote.lower()
@@ -122,7 +129,9 @@ async def test_asymmetric_termination_rule():
 async def test_material_financial_penalty_rule():
     text = "Late payment shall incur penal interest of 24% per annum compounding daily plus flat forfeiture of entire security deposit."
     res = await risk_engine.analyze_document_risks(text)
-    risks = [r for r in res.risks if r.category == RiskCategory.FINANCIAL and r.rule_id == "RULE-FIN-001"]
+    risks = [
+        r for r in res.risks if r.category == RiskCategory.FINANCIAL and r.rule_id == "RULE-FIN-001"
+    ]
     assert len(risks) >= 1
     assert risks[0].severity == RiskSeverity.CRITICAL
 
@@ -131,7 +140,9 @@ async def test_material_financial_penalty_rule():
 async def test_excessive_security_deposit_rule():
     text = "The tenant shall provide a security deposit equivalent to 6 months rent, to be refunded within 90 days after vacating."
     res = await risk_engine.analyze_document_risks(text)
-    risks = [r for r in res.risks if r.category == RiskCategory.FINANCIAL and r.rule_id == "RULE-FIN-002"]
+    risks = [
+        r for r in res.risks if r.category == RiskCategory.FINANCIAL and r.rule_id == "RULE-FIN-002"
+    ]
     assert len(risks) >= 1
     assert risks[0].severity == RiskSeverity.HIGH
 
@@ -158,7 +169,9 @@ async def test_restraint_of_trade_rule():
 
 @pytest.mark.asyncio
 async def test_unclear_termination_conditions_rule():
-    text = "The employer may terminate at will without cause upon any event deemed a material breach."
+    text = (
+        "The employer may terminate at will without cause upon any event deemed a material breach."
+    )
     res = await risk_engine.analyze_document_risks(text)
     risks = [r for r in res.risks if r.rule_id == "RULE-TRM-003"]
     assert len(risks) == 1
@@ -257,6 +270,7 @@ async def test_missing_deposit_return_sla_rule():
 # 2. NEGATIVE TESTS: BALANCED / FAIR TERMS PRODUCE ZERO RISKS
 # =====================================================================
 
+
 @pytest.mark.asyncio
 async def test_balanced_contract_terms_no_false_positives():
     balanced_text = (
@@ -270,13 +284,16 @@ async def test_balanced_contract_terms_no_false_positives():
     )
     res = await risk_engine.analyze_document_risks(balanced_text)
     # Critical and high risks should be zero for this balanced text
-    crit_or_high = [r for r in res.risks if r.severity in [RiskSeverity.CRITICAL, RiskSeverity.HIGH]]
+    crit_or_high = [
+        r for r in res.risks if r.severity in [RiskSeverity.CRITICAL, RiskSeverity.HIGH]
+    ]
     assert len(crit_or_high) == 0
 
 
 # =====================================================================
 # 3. RULE REGISTRY & VERSION AUDITABILITY
 # =====================================================================
+
 
 def test_rule_registry_versioning():
     rules = risk_rule_registry.list_rules()

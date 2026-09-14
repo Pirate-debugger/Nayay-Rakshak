@@ -63,13 +63,16 @@ def generate_secure_storage_name(prefix: str, extension: str) -> str:
 EICAR_SIGNATURE = b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
 
 
-def scan_with_clamav_socket(file_bytes: bytes, host: str, port: int, timeout: float = 2.0) -> Tuple[bool, str]:
+def scan_with_clamav_socket(
+    file_bytes: bytes, host: str, port: int, timeout: float = 2.0
+) -> Tuple[bool, str]:
     """
     Query ClamAV daemon using standard INSTREAM protocol over TCP socket.
     Returns (is_infected, message).
     """
     try:
         import socket
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(timeout)
             s.connect((host, port))
@@ -77,7 +80,7 @@ def scan_with_clamav_socket(file_bytes: bytes, host: str, port: int, timeout: fl
 
             chunk_size = 2048
             for i in range(0, len(file_bytes), chunk_size):
-                chunk = file_bytes[i:i + chunk_size]
+                chunk = file_bytes[i : i + chunk_size]
                 chunk_len = len(chunk).to_bytes(4, byteorder="big")
                 s.sendall(chunk_len + chunk)
             s.sendall(b"\x00\x00\x00\x00")
@@ -100,6 +103,7 @@ def scan_with_malware_engine(file_bytes: bytes, filename: str) -> Tuple[bool, st
     2. Configurable ClamAV daemon scan with fail-closed production mode.
     """
     import logging
+
     _logger = logging.getLogger("nyaya_rakshak.malware_scan")
 
     # 1. Built-in EICAR signature verification
@@ -108,13 +112,19 @@ def scan_with_malware_engine(file_bytes: bytes, filename: str) -> Tuple[bool, st
 
     # 2. Configurable ClamAV daemon
     if settings.ENABLE_CLAMAV_SCAN:
-        is_infected, msg = scan_with_clamav_socket(file_bytes, settings.CLAMAV_HOST, settings.CLAMAV_PORT)
+        is_infected, msg = scan_with_clamav_socket(
+            file_bytes, settings.CLAMAV_HOST, settings.CLAMAV_PORT
+        )
         if is_infected:
             return True, msg
         if "CLAMAV_UNAVAILABLE" in msg:
             if settings.CLAMAV_REQUIRED:
-                raise SecurityValidationError(f"Production security violation: Antivirus scanner is unreachable ({msg}).")
-            _logger.warning(f"ClamAV scanner unavailable ({msg}); proceeding with built-in heuristic signature detection.")
+                raise SecurityValidationError(
+                    f"Production security violation: Antivirus scanner is unreachable ({msg})."
+                )
+            _logger.warning(
+                f"ClamAV scanner unavailable ({msg}); proceeding with built-in heuristic signature detection."
+            )
 
     return False, ""
 
@@ -158,7 +168,10 @@ def detect_malicious_content(file_bytes: bytes, ext: str) -> Tuple[bool, str]:
             img = Image.open(io.BytesIO(file_bytes))
             img.verify()
         except Image.DecompressionBombError:
-            return True, "Image exceeds safe decompression thresholds (potential decompression bomb)."
+            return (
+                True,
+                "Image exceeds safe decompression thresholds (potential decompression bomb).",
+            )
         except Exception as e:
             return True, f"Corrupted or invalid image format: {str(e)}"
 
@@ -200,12 +213,16 @@ def validate_file_magic_and_mime(file_bytes: bytes, filename: str) -> str:
     # Validate exact magic bytes per extension
     if ext == ".pdf":
         if not file_bytes.startswith(PDF_MAGIC):
-            raise FileIntegrityError("File claims to be a PDF but magic byte signature (%PDF-) is missing or forged.")
+            raise FileIntegrityError(
+                "File claims to be a PDF but magic byte signature (%PDF-) is missing or forged."
+            )
         return "pdf"
 
     elif ext == ".docx":
         if not file_bytes.startswith(DOCX_MAGIC):
-            raise FileIntegrityError("File claims to be a DOCX document but ZIP magic signature is invalid or forged.")
+            raise FileIntegrityError(
+                "File claims to be a DOCX document but ZIP magic signature is invalid or forged."
+            )
         return "docx"
 
     elif ext == ".txt":
@@ -222,12 +239,16 @@ def validate_file_magic_and_mime(file_bytes: bytes, filename: str) -> str:
 
     elif ext == ".png":
         if not file_bytes.startswith(PNG_MAGIC):
-            raise FileIntegrityError("File claims to be a PNG image but magic byte signature is invalid or forged.")
+            raise FileIntegrityError(
+                "File claims to be a PNG image but magic byte signature is invalid or forged."
+            )
         return "png"
 
     elif ext in (".jpg", ".jpeg"):
         if not file_bytes.startswith(JPEG_MAGIC):
-            raise FileIntegrityError("File claims to be a JPEG image but magic byte signature is invalid or forged.")
+            raise FileIntegrityError(
+                "File claims to be a JPEG image but magic byte signature is invalid or forged."
+            )
         return "jpg"
 
     raise SecurityValidationError(f"Unsupported file type: {ext}")

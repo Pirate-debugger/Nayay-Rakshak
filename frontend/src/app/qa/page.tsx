@@ -4,14 +4,10 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   AlertCircle,
-  ArrowRight,
   BookOpen,
-  CheckCircle2,
-  FileText,
   HelpCircle,
   Lock,
   Quote,
-  Scale,
   Send,
   ShieldCheck,
 } from 'lucide-react';
@@ -40,7 +36,7 @@ function QAContent() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [selectedDocId]);
 
   const handleAsk = async (qText?: string) => {
     const q = qText || question;
@@ -189,7 +185,12 @@ function QAContent() {
 
       {/* Response Display */}
       {response && (
-        <div className="glass-panel p-6 space-y-4 border-l-4 border-l-amber-500">
+        <div
+          role="region"
+          aria-live="polite"
+          aria-label="Verified answer response"
+          className="glass-panel p-6 space-y-4 border-l-4 border-l-amber-500"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-amber-400" />
@@ -234,7 +235,7 @@ function QAContent() {
                     </div>
 
                     <p className="text-xs text-slate-300 font-mono italic leading-relaxed bg-slate-900/50 p-2.5 rounded border-l-2 border-l-amber-500">
-                      "{cit.verbatim_quote}"
+                      &ldquo;{cit.verbatim_quote}&rdquo;
                     </p>
                   </div>
                 ))}

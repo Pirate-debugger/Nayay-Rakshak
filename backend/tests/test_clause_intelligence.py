@@ -1,9 +1,7 @@
-import json
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from pydantic import ValidationError
 
-from app.main import app
 from app.schemas.clause_intelligence import (
     ClauseSemanticInterpretation,
     DeterministicFacts,
@@ -12,14 +10,11 @@ from app.schemas.clause_intelligence import (
 )
 from app.services.clause_intelligence import (
     analyze_clause_structured,
-    analyze_clause_structured_async,
     enforce_deterministic_immutability,
     process_document_clauses,
-    segment_clauses_from_text,
 )
 from app.services.clause_taxonomy import (
     BaseTaxonomyPlugin,
-    RentalLeaseTaxonomyPlugin,
     TaxonomyRegistry,
     taxonomy_registry,
 )
@@ -32,10 +27,10 @@ from app.services.deterministic_extractor import (
     extract_section_numbers,
 )
 
-
 # =====================================================================
 # 1. Deterministic Extraction Tests
 # =====================================================================
+
 
 def test_deterministic_currencies():
     text = (
@@ -130,6 +125,7 @@ def test_deterministic_sections():
 # 2. All 8 Domain Taxonomies & Plugin Extensibility Tests
 # =====================================================================
 
+
 def test_all_8_taxonomy_categories_present():
     categories = taxonomy_registry.list_categories()
     category_ids = {c["id"] for c in categories}
@@ -189,7 +185,9 @@ def test_taxonomy_classification_and_risk_evaluation():
     assert cat == "service_agreements"
 
     # 6. Loan / Finance
-    loan_text = "The borrower shall pay monthly EMI towards the principal loan and floating rate interest."
+    loan_text = (
+        "The borrower shall pay monthly EMI towards the principal loan and floating rate interest."
+    )
     cat, _ = taxonomy_registry.classify_clause(loan_text)
     assert cat == "loan_finance"
 
@@ -209,6 +207,7 @@ def test_taxonomy_classification_and_risk_evaluation():
 
 def test_custom_taxonomy_plugin_extensibility():
     """Verify third parties or new modules can dynamically register domain plugins."""
+
     class IntellectualPropertyPlugin(BaseTaxonomyPlugin):
         @property
         def category_id(self) -> str:
@@ -228,7 +227,12 @@ def test_custom_taxonomy_plugin_extensibility():
 
         def evaluate_covenant_risk(self, clause_text: str, deterministic_facts):
             if "exclusive worldwide perpetual royalty-free" in clause_text.lower():
-                return ("HIGH", True, "Copyright Act, 1957 § 19", "Perpetual royalty-free grant may conflict with statutory author royalties.")
+                return (
+                    "HIGH",
+                    True,
+                    "Copyright Act, 1957 § 19",
+                    "Perpetual royalty-free grant may conflict with statutory author royalties.",
+                )
             return ("LOW", False, None, None)
 
     custom_registry = TaxonomyRegistry()
@@ -249,6 +253,7 @@ def test_custom_taxonomy_plugin_extensibility():
 # =====================================================================
 # 3. Deterministic Immutability Enforcement Tests
 # =====================================================================
+
 
 def test_deterministic_immutability_prevents_ai_overwrite():
     """
@@ -274,9 +279,9 @@ def test_deterministic_immutability_prevents_ai_overwrite():
         "prohibitions": [],
         "conditions": ["Delayed payment"],
         "triggers": ["Failure to pay on time"],
-        "deadlines": ["Within 3 days"],           # AI altered 7 days -> 3 days
-        "monetary_values": ["USD 500"],            # AI altered ₹45,000 -> USD 500
-        "penalties": ["Late fee of 5%"],          # AI altered 18% -> 5%
+        "deadlines": ["Within 3 days"],  # AI altered 7 days -> 3 days
+        "monetary_values": ["USD 500"],  # AI altered ₹45,000 -> USD 500
+        "penalties": ["Late fee of 5%"],  # AI altered 18% -> 5%
         "termination_conditions": [],
         "jurisdiction": "New Delhi",
         "governing_law": "Laws of India",
@@ -287,7 +292,7 @@ def test_deterministic_immutability_prevents_ai_overwrite():
         "intellectual_property": None,
         "renewal": None,
         "dispute_resolution": None,
-        "privacy_data_terms": None
+        "privacy_data_terms": None,
     }
 
     # Pass through immutability enforcement
@@ -310,12 +315,13 @@ def test_deterministic_immutability_prevents_ai_overwrite():
 # 4. Strict Schema & Pydantic Validation Tests
 # =====================================================================
 
+
 def test_strict_schema_forbids_extra_fields():
     """Verify that StructuredClauseRecord and ClauseSemanticInterpretation forbid unexpected keys."""
     with pytest.raises(ValidationError):
         ClauseSemanticInterpretation(
             parties_affected=["Tenant"],
-            unexpected_hallucinated_field="invalid"  # Must fail because extra="forbid"
+            unexpected_hallucinated_field="invalid",  # Must fail because extra="forbid"
         )
 
     with pytest.raises(ValidationError):
@@ -328,12 +334,14 @@ def test_strict_schema_forbids_extra_fields():
             category="rental",
             original_text="Raw clause text",
             simplified_explanation="Simple",
-            evidence_location=EvidenceLocation(page_number=1, char_start=0, char_end=10, quote_snippet="Raw"),
+            evidence_location=EvidenceLocation(
+                page_number=1, char_start=0, char_end=10, quote_snippet="Raw"
+            ),
             deterministic_facts=DeterministicFacts(),
             structured_interpretation=ClauseSemanticInterpretation(),
             extraction_confidence=0.95,
             interpretation_confidence=0.90,
-            unauthorized_extra_key="forbidden"  # Must fail
+            unauthorized_extra_key="forbidden",  # Must fail
         )
 
 
@@ -345,7 +353,6 @@ def test_structured_clause_record_properties_and_flat_export():
         "Subject to Arbitration and Conciliation Act 1996."
     )
     rec = analyze_clause_structured("C-12", raw_text, page_number=2, section_name="Clause 12")
-
 
     # Check top-level properties
     assert rec.clause_id == "C-12"
@@ -450,7 +457,14 @@ def test_synthetic_residential_lease_end_to_end():
     assert penalty_clause.statutory_cross_reference is not None
 
     # Check Jurisdiction clause
-    jur_clause = next((r for r in records if "Courts at Bengaluru" in r.original_text or "jurisdiction" in r.original_text.lower()), None)
+    jur_clause = next(
+        (
+            r
+            for r in records
+            if "Courts at Bengaluru" in r.original_text or "jurisdiction" in r.original_text.lower()
+        ),
+        None,
+    )
     assert jur_clause is not None
     assert jur_clause.jurisdiction is not None
     assert "Bengaluru" in jur_clause.jurisdiction
@@ -463,7 +477,9 @@ def test_synthetic_employment_agreement_end_to_end():
     # Check CTC clause
     ctc_clause = next((r for r in records if "15 Lakhs" in r.original_text), None)
     assert ctc_clause is not None
-    assert any("15,000,000" in m or "15000000" in m or "1,500,000" in m for m in ctc_clause.monetary_values)
+    assert any(
+        "15,000,000" in m or "15000000" in m or "1,500,000" in m for m in ctc_clause.monetary_values
+    )
 
     # Check Non-compete clause (must be flagged void under Section 27 Indian Contract Act)
     non_compete = next((r for r in records if "non-compete" in r.original_text.lower()), None)
@@ -476,13 +492,14 @@ def test_synthetic_employment_agreement_end_to_end():
 # 6. API Endpoint Integration Tests
 # =====================================================================
 
+
 @pytest.mark.asyncio
 async def test_api_single_clause_extract_endpoint(client: AsyncClient, auth_headers: dict):
     payload = {
         "clause_text": "Clause 8. Jurisdiction: This Agreement shall be governed by the laws of India and Courts at Mumbai shall have exclusive jurisdiction.",
         "clause_id": "C-08",
         "page_number": 3,
-        "section_name": "Clause 8. Jurisdiction"
+        "section_name": "Clause 8. Jurisdiction",
     }
     resp = await client.post("/api/v1/analysis/clause/extract", json=payload, headers=auth_headers)
     assert resp.status_code == 200
@@ -493,4 +510,3 @@ async def test_api_single_clause_extract_endpoint(client: AsyncClient, auth_head
     assert data["structured_interpretation"]["governing_law"] == "Laws of India"
     assert "Mumbai" in (data["structured_interpretation"]["jurisdiction"] or "")
     assert data["extraction_confidence"] >= 0.95
-

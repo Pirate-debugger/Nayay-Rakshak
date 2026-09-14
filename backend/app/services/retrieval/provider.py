@@ -4,8 +4,8 @@ Discovers and retrieves authoritative statutory and judicial sources from the So
 Applies strict temporal validity checks, jurisdiction filtering, and provenance tracking.
 """
 
-from datetime import datetime, timezone
 import hashlib
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from app.schemas.retrieval import (
@@ -13,10 +13,9 @@ from app.schemas.retrieval import (
     EvidenceType,
     RetrievalFilter,
     RetrievalResultItem,
-    SourceStatus,
     SourceTier,
 )
-from app.services.retrieval.registry import AuthoritativeLegalItem, source_registry
+from app.services.retrieval.registry import source_registry
 
 
 class LegalSourceProvider:
@@ -26,10 +25,7 @@ class LegalSourceProvider:
         self.registry = registry or source_registry
 
     def search_authorities(
-        self,
-        query: str,
-        filters: Optional[RetrievalFilter] = None,
-        top_k: int = 5
+        self, query: str, filters: Optional[RetrievalFilter] = None, top_k: int = 5
     ) -> List[RetrievalResultItem]:
         filters = filters or RetrievalFilter()
         q_tokens = [t.lower() for t in query.split() if len(t) > 2]
@@ -50,14 +46,25 @@ class LegalSourceProvider:
             # 2. Jurisdiction Filtering (Never silently mix jurisdictions)
             if filters.jurisdiction and not filters.allow_cross_jurisdiction:
                 # If target is a state, allow state law + Union of India law, but NOT other states
-                if filters.jurisdiction != "Union of India" and item.jurisdiction != "Union of India" and item.jurisdiction != filters.jurisdiction:
+                if (
+                    filters.jurisdiction != "Union of India"
+                    and item.jurisdiction != "Union of India"
+                    and item.jurisdiction != filters.jurisdiction
+                ):
                     continue
                 # If target is Union of India, do not pull state laws unless permitted
-                if filters.jurisdiction == "Union of India" and item.jurisdiction != "Union of India":
+                if (
+                    filters.jurisdiction == "Union of India"
+                    and item.jurisdiction != "Union of India"
+                ):
                     continue
 
             # 3. Domain Filtering
-            if filters.legal_domain and item.legal_domain != "general" and item.legal_domain != filters.legal_domain:
+            if (
+                filters.legal_domain
+                and item.legal_domain != "general"
+                and item.legal_domain != filters.legal_domain
+            ):
                 # Continue if query domain strongly mismatches
                 pass
 
@@ -74,7 +81,9 @@ class LegalSourceProvider:
             if match_count > 0:
                 keyword_score = min(1.0, match_count / max(1, len(q_tokens)))
                 # Tier boost
-                tier_boost = 1.0 if item.tier == SourceTier.TIER_1_OFFICIAL_LEGISLATION_COURTS else 0.8
+                tier_boost = (
+                    1.0 if item.tier == SourceTier.TIER_1_OFFICIAL_LEGISLATION_COURTS else 0.8
+                )
                 final_score = keyword_score * tier_boost
 
                 provenance = {
@@ -84,7 +93,7 @@ class LegalSourceProvider:
                     "authority_level": item.authority_level.value,
                     "effective_from": item.effective_from,
                     "effective_to": item.effective_to,
-                    "status": item.status.value
+                    "status": item.status.value,
                 }
 
                 citation = CitationRecord(
@@ -100,7 +109,7 @@ class LegalSourceProvider:
                     url_or_reference=item.official_url,
                     supporting_text=item.content,
                     relevance_score=final_score,
-                    provenance=provenance
+                    provenance=provenance,
                 )
 
                 res_item = RetrievalResultItem(
@@ -117,7 +126,7 @@ class LegalSourceProvider:
                     jurisdiction=item.jurisdiction,
                     effective_from=item.effective_from,
                     effective_to=item.effective_to,
-                    status=item.status
+                    status=item.status,
                 )
                 scored_items.append(res_item)
 

@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
@@ -7,7 +8,9 @@ class UserRegister(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     email: EmailStr
-    password: str = Field(..., min_length=8, description="Minimum 8 characters with upper, lower, digit, special")
+    password: str = Field(
+        ..., min_length=8, description="Minimum 8 characters with upper, lower, digit, special"
+    )
     full_name: str = Field(..., min_length=2, max_length=150)
 
 

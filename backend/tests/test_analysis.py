@@ -7,7 +7,7 @@ async def test_harsh_lease_analysis(client, auth_headers):
     load_res = await client.post(
         "/api/v1/documents/load-sample",
         data={"sample_key": "harsh_landlord_lease_delhi"},
-        headers=auth_headers
+        headers=auth_headers,
     )
     assert load_res.status_code == 201
     doc_id = load_res.json()["id"]

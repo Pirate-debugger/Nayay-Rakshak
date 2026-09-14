@@ -22,7 +22,6 @@ from typing import Any, Dict, List, Optional
 from app.schemas.action_navigator import (
     NAVIGATOR_DISCLAIMER,
     ActionNavigatorResponse,
-    UrgencyLevel,
 )
 from app.services.action_navigator.escalation import (
     compute_professional_review_urgency,
@@ -93,29 +92,23 @@ class ActionNavigatorEngine:
                 "analysis_risks": len(analysis_risks),
                 "obligations": len(obligations),
                 "risk_engine_risks": len(risk_records),
-            }
+            },
         )
 
         # ── Section 1: Known Facts ────────────────────────────────────────────
         known_facts = extract_known_facts(clauses, obligations)
 
         # ── Section 2: Unknown Facts ──────────────────────────────────────────
-        unknown_facts = extract_unknown_facts(
-            analysis_risks, missing_clauses, risk_records
-        )
+        unknown_facts = extract_unknown_facts(analysis_risks, missing_clauses, risk_records)
 
         # ── Section 3: Important Documents ───────────────────────────────────
-        important_documents = extract_important_documents(
-            clauses, analysis_risks, obligations
-        )
+        important_documents = extract_important_documents(clauses, analysis_risks, obligations)
 
         # ── Section 4: Important Dates ────────────────────────────────────────
         important_dates = extract_important_dates(clauses, obligations)
 
         # ── Section 5: Potential Issues ───────────────────────────────────────
-        potential_issues = map_risks_to_issues(
-            analysis_risks, risk_records, missing_protections
-        )
+        potential_issues = map_risks_to_issues(analysis_risks, risk_records, missing_protections)
 
         # ── Section 6 & 7: Questions + Next Steps ────────────────────────────
         # Escalation must be evaluated first (some steps depend on it)
@@ -125,9 +118,7 @@ class ActionNavigatorEngine:
             document_full_text=document_full_text,
         )
 
-        questions_to_ask = build_questions(
-            risk_records, missing_protections, analysis_risks
-        )
+        questions_to_ask = build_questions(risk_records, missing_protections, analysis_risks)
 
         next_steps = build_next_steps(
             risk_records=risk_records,
@@ -140,9 +131,7 @@ class ActionNavigatorEngine:
 
         # ── Section 8: Escalation / Professional Help ─────────────────────────
         professional_review_recommended = bool(escalation_triggers)
-        professional_review_urgency = compute_professional_review_urgency(
-            escalation_triggers
-        )
+        professional_review_urgency = compute_professional_review_urgency(escalation_triggers)
 
         return ActionNavigatorResponse(
             document_id=document_id,

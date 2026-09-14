@@ -14,6 +14,7 @@ class ClauseItem(BaseModel):
     page_number: int
     recommendations: Optional[str] = None
 
+
 class RiskItem(BaseModel):
     risk_id: str
     severity: str  # "LOW", "MEDIUM", "HIGH", "SEVERE"
@@ -23,6 +24,7 @@ class RiskItem(BaseModel):
     clause_reference: str
     countermeasure: str
 
+
 class ObligationItem(BaseModel):
     obligation_id: str
     responsible_party: str
@@ -30,12 +32,14 @@ class ObligationItem(BaseModel):
     deadline_or_frequency: str
     penalty_for_breach: str
 
+
 class MissingClauseItem(BaseModel):
     clause_name: str
     importance: str  # "CRITICAL", "RECOMMENDED", "STANDARD"
     why_needed: str
     suggested_language: str
     risk_if_missing: str
+
 
 class AnalysisResponse(BaseModel):
     document_id: int

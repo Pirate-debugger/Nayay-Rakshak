@@ -10,7 +10,6 @@ Tests verify:
 6. CRITICAL risk deterministically triggers escalation
 """
 
-import re
 import pytest
 
 # ── Forbidden phrases — must NEVER appear in any step/explanation output ──────
@@ -39,6 +38,7 @@ def _check_no_forbidden_phrases(text: str) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_action_navigator_basic(client, auth_headers):
@@ -246,5 +246,5 @@ async def test_action_navigator_step_ordering(client, auth_headers):
 
     for i, step in enumerate(steps, 1):
         assert step["step_number"] == i, (
-            f"Step at index {i-1} has step_number={step['step_number']}, expected {i}"
+            f"Step at index {i - 1} has step_number={step['step_number']}, expected {i}"
         )

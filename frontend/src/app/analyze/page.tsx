@@ -8,22 +8,18 @@ import {
   AlertTriangle,
   ArrowRight,
   BookOpen,
-  CheckCircle2,
   Clock,
-  FileCheck2,
   FileText,
   Filter,
   HelpCircle,
-  Lightbulb,
   ListChecks,
   Scale,
-  ShieldAlert,
 } from 'lucide-react';
 import ClauseCard from '@/components/ClauseCard';
 import RiskPill from '@/components/RiskPill';
 import { useLanguage } from '@/components/AppShell';
 import { analyzeDocument, getDocumentAnalysis, getDocumentChecklist, listDocuments } from '@/lib/api';
-import { AnalysisResponse, DocumentMeta } from '@/lib/types';
+import { AnalysisResponse, ChecklistItem, DocumentChecklistResponse, DocumentMeta } from '@/lib/types';
 
 function AnalyzeContent() {
   const { lang, t } = useLanguage();
@@ -33,7 +29,7 @@ function AnalyzeContent() {
   const [documents, setDocuments] = useState<DocumentMeta[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(docIdParam ? parseInt(docIdParam, 10) : null);
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
-  const [checklist, setChecklist] = useState<any | null>(null);
+  const [checklist, setChecklist] = useState<DocumentChecklistResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [activeTab, setActiveTab] = useState<'clauses' | 'risks' | 'obligations' | 'missing' | 'checklist'>('clauses');
@@ -44,41 +40,41 @@ function AnalyzeContent() {
         setDocuments(docs);
         if (!selectedDocId && docs.length > 0) {
           setSelectedDocId(docs[0].id);
+          setLoading(true);
         }
       })
       .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (selectedDocId) {
-      loadAnalysis(selectedDocId);
-    }
   }, [selectedDocId]);
 
-  const loadAnalysis = async (id: number) => {
-    try {
-      setLoading(true);
-      try {
-        const cached = await getDocumentAnalysis(id);
-        setAnalysis(cached);
-      } catch {
-        const fresh = await analyzeDocument(id);
-        setAnalysis(fresh);
-      }
+  useEffect(() => {
+    if (!selectedDocId) return;
 
-      try {
-        const chk = await getDocumentChecklist(id);
-        setChecklist(chk);
-      } catch {
-        // ignore checklist failure
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load analysis';
-      alert(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    let active = true;
+    const docId = selectedDocId;
+
+    getDocumentAnalysis(docId)
+      .catch(() => analyzeDocument(docId))
+      .then((data) => {
+        if (active) setAnalysis(data);
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Failed to load analysis';
+        alert(message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    getDocumentChecklist(docId)
+      .then((chk) => {
+        if (active) setChecklist(chk);
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [selectedDocId]);
 
   const categories = analysis
     ? ['ALL', ...Array.from(new Set(analysis.clauses.map((c) => c.category)))]
@@ -129,8 +125,12 @@ function AnalyzeContent() {
       </div>
 
       {loading ? (
-        <div className="text-center py-20 space-y-3">
-          <div className="w-12 h-12 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin mx-auto"></div>
+        <div
+          className="text-center py-20 space-y-3"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="w-12 h-12 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin mx-auto" aria-hidden="true"></div>
           <p className="text-sm text-slate-300 font-medium">
             {lang === 'hi'
               ? 'दस्तावेज़ का विश्लेषण हो रहा है (शर्तें, जोखिम और कानूनी सारांश)...'
@@ -416,7 +416,7 @@ function AnalyzeContent() {
                       <span className="text-amber-400 font-semibold block mb-1">
                         {lang === 'hi' ? 'अनुशंसित भाषा (शामिल करने के लिए):' : 'Suggested Language to Include:'}
                       </span>
-                      <p className="font-mono text-slate-300 italic">"{m.suggested_language}"</p>
+                      <p className="font-mono text-slate-300 italic">&ldquo;{m.suggested_language}&rdquo;</p>
                     </div>
 
                     <div className="text-xs text-red-300 flex items-start gap-1.5">
@@ -446,7 +446,7 @@ function AnalyzeContent() {
                   </div>
 
                   <div className="space-y-3">
-                    {checklist.items?.map((item: any) => (
+                    {checklist.items?.map((item: ChecklistItem) => (
                       <label
                         key={item.id}
                         className="flex items-start gap-3 p-3 rounded-lg bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition cursor-pointer"

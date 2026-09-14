@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   FileCheck2,
   FileDiff,
-  FileText,
   HelpCircle,
   Lock,
   Scale,

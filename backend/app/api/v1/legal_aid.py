@@ -11,10 +11,13 @@ from app.services.legal_aid_service import LEGAL_AID_RESOURCES, evaluate_free_le
 
 router = APIRouter(prefix="/legal-aid", tags=["Legal Aid & Resources"])
 
+
 @router.get("/resources", response_model=List[LegalAidResource])
 async def list_legal_aid_resources(
     query: Optional[str] = Query(None, description="Search query for name, state, or service"),
-    organization_type: Optional[str] = Query(None, description="Filter by NALSA, SLSA, TELE_LAW, CONSUMER_FORUM, CYBER_HELPLINE")
+    organization_type: Optional[str] = Query(
+        None, description="Filter by NALSA, SLSA, TELE_LAW, CONSUMER_FORUM, CYBER_HELPLINE"
+    ),
 ):
     """
     Search directory of authoritative Indian legal aid institutions and helplines.
@@ -25,13 +28,15 @@ async def list_legal_aid_resources(
     if query:
         q = query.lower()
         results = [
-            r for r in results
+            r
+            for r in results
             if q in r.name.lower()
             or q in r.jurisdiction.lower()
             or q in r.description.lower()
             or any(q in s.lower() for s in r.services_offered)
         ]
     return results
+
 
 @router.post("/check-eligibility", response_model=EligibilityCheckResponse)
 async def check_eligibility_endpoint(req: EligibilityCheckRequest):

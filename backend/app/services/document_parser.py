@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import docx
 import pypdf
 
-from app.core.exceptions import FileIntegrityError, SecurityValidationError
+from app.core.exceptions import FileIntegrityError
 from app.core.file_security import validate_file_magic_and_mime
 from app.services.ocr_service import extract_image_ocr_layout, is_scanned_page
 
@@ -24,10 +24,10 @@ def normalize_text(text: str) -> str:
     # Unicode NFKC normalization
     normalized = unicodedata.normalize("NFKC", text)
     # Normalize quotes
-    normalized = re.sub(r'[\u2018\u2019\u201A\u201B]', "'", normalized)
-    normalized = re.sub(r'[\u201C\u201D\u201E\u201F]', '"', normalized)
+    normalized = re.sub(r"[\u2018\u2019\u201A\u201B]", "'", normalized)
+    normalized = re.sub(r"[\u201C\u201D\u201E\u201F]", '"', normalized)
     # Normalize dashes
-    normalized = re.sub(r'[\u2013\u2014]', '-', normalized)
+    normalized = re.sub(r"[\u2013\u2014]", "-", normalized)
     # Remove control characters except newlines and tabs
     normalized = "".join(ch for ch in normalized if ch in ("\n", "\t") or ch >= " ")
     return normalized.strip()
@@ -55,7 +55,6 @@ def extract_document_structure(file_bytes: bytes, file_type: str) -> Dict[str, A
     pages: List[Dict[str, Any]] = []
     sections: List[Dict[str, Any]] = []
     tables: List[Dict[str, Any]] = []
-    lists: List[Dict[str, Any]] = []
 
     if file_type == "pdf":
         try:
@@ -75,39 +74,45 @@ def extract_document_structure(file_bytes: bytes, file_type: str) -> Dict[str, A
                         except Exception:
                             img_bytes = b""
                     ocr_res = extract_image_ocr_layout(img_bytes, page_number=page_num)
-                    pages.append({
-                        "page_number": page_num,
-                        "raw_text": ocr_res["text"],
-                        "clean_text": ocr_res["text"],
-                        "ocr_confidence": ocr_res["confidence"],
-                        "layout_data": json.dumps(ocr_res["boxes"]),
-                        "is_scanned": True
-                    })
+                    pages.append(
+                        {
+                            "page_number": page_num,
+                            "raw_text": ocr_res["text"],
+                            "clean_text": ocr_res["text"],
+                            "ocr_confidence": ocr_res["confidence"],
+                            "layout_data": json.dumps(ocr_res["boxes"]),
+                            "is_scanned": True,
+                        }
+                    )
                 else:
                     # Synthetic coordinates from layout lines
                     lines = [ln.strip() for ln in clean_text.split("\n") if ln.strip()]
                     boxes = []
                     y_cursor = 50
                     for line_idx, line in enumerate(lines):
-                        boxes.append({
-                            "line_index": line_idx,
-                            "text": line,
-                            "x": 40,
-                            "y": y_cursor,
-                            "width": min(len(line) * 7, 700),
-                            "height": 18,
-                            "is_heading": is_heading_line(line)
-                        })
+                        boxes.append(
+                            {
+                                "line_index": line_idx,
+                                "text": line,
+                                "x": 40,
+                                "y": y_cursor,
+                                "width": min(len(line) * 7, 700),
+                                "height": 18,
+                                "is_heading": is_heading_line(line),
+                            }
+                        )
                         y_cursor += 24
 
-                    pages.append({
-                        "page_number": page_num,
-                        "raw_text": raw_text,
-                        "clean_text": clean_text,
-                        "ocr_confidence": 1.0,
-                        "layout_data": json.dumps(boxes),
-                        "is_scanned": False
-                    })
+                    pages.append(
+                        {
+                            "page_number": page_num,
+                            "raw_text": raw_text,
+                            "clean_text": clean_text,
+                            "ocr_confidence": 1.0,
+                            "layout_data": json.dumps(boxes),
+                            "is_scanned": False,
+                        }
+                    )
         except Exception as e:
             raise FileIntegrityError(f"Failed to parse PDF document structure: {str(e)}")
 
@@ -124,15 +129,17 @@ def extract_document_structure(file_bytes: bytes, file_type: str) -> Dict[str, A
                     continue
                 para_texts.append(text)
                 is_head = p.style.name.startswith("Heading") or is_heading_line(text)
-                boxes.append({
-                    "paragraph_index": p_idx,
-                    "text": text,
-                    "x": 40,
-                    "y": y_cursor,
-                    "width": min(len(text) * 7, 700),
-                    "height": 22 if is_head else 18,
-                    "is_heading": is_head
-                })
+                boxes.append(
+                    {
+                        "paragraph_index": p_idx,
+                        "text": text,
+                        "x": 40,
+                        "y": y_cursor,
+                        "width": min(len(text) * 7, 700),
+                        "height": 22 if is_head else 18,
+                        "is_heading": is_head,
+                    }
+                )
                 y_cursor += 26
 
             # Extract tables
@@ -141,22 +148,26 @@ def extract_document_structure(file_bytes: bytes, file_type: str) -> Dict[str, A
                 for row in table.rows:
                     t_rows.append([cell.text.strip() for cell in row.cells])
                 if t_rows:
-                    tables.append({
-                        "page_number": 1,
-                        "table_index": t_idx,
-                        "rows": t_rows,
-                        "markdown": format_table_markdown(t_rows)
-                    })
+                    tables.append(
+                        {
+                            "page_number": 1,
+                            "table_index": t_idx,
+                            "rows": t_rows,
+                            "markdown": format_table_markdown(t_rows),
+                        }
+                    )
 
             full_text = normalize_text("\n\n".join(para_texts))
-            pages.append({
-                "page_number": 1,
-                "raw_text": full_text,
-                "clean_text": full_text,
-                "ocr_confidence": 1.0,
-                "layout_data": json.dumps(boxes),
-                "is_scanned": False
-            })
+            pages.append(
+                {
+                    "page_number": 1,
+                    "raw_text": full_text,
+                    "clean_text": full_text,
+                    "ocr_confidence": 1.0,
+                    "layout_data": json.dumps(boxes),
+                    "is_scanned": False,
+                }
+            )
         except Exception as e:
             raise FileIntegrityError(f"Failed to parse DOCX document: {str(e)}")
 
@@ -171,38 +182,44 @@ def extract_document_structure(file_bytes: bytes, file_type: str) -> Dict[str, A
         boxes = []
         y_cursor = 40
         for idx, ln in enumerate(lines):
-            boxes.append({
-                "line_index": idx,
-                "text": ln,
-                "x": 30,
-                "y": y_cursor,
-                "width": min(len(ln) * 6, 650),
-                "height": 16,
-                "is_heading": is_heading_line(ln)
-            })
+            boxes.append(
+                {
+                    "line_index": idx,
+                    "text": ln,
+                    "x": 30,
+                    "y": y_cursor,
+                    "width": min(len(ln) * 6, 650),
+                    "height": 16,
+                    "is_heading": is_heading_line(ln),
+                }
+            )
             y_cursor += 20
 
-        pages.append({
-            "page_number": 1,
-            "raw_text": raw_text,
-            "clean_text": clean_text,
-            "ocr_confidence": 1.0,
-            "layout_data": json.dumps(boxes),
-            "is_scanned": False
-        })
+        pages.append(
+            {
+                "page_number": 1,
+                "raw_text": raw_text,
+                "clean_text": clean_text,
+                "ocr_confidence": 1.0,
+                "layout_data": json.dumps(boxes),
+                "is_scanned": False,
+            }
+        )
 
     elif file_type in ("png", "jpg"):
         # Scanned document image
         ocr_res = extract_image_ocr_layout(file_bytes, page_number=1)
         clean_text = normalize_text(ocr_res["text"])
-        pages.append({
-            "page_number": 1,
-            "raw_text": ocr_res["text"],
-            "clean_text": clean_text,
-            "ocr_confidence": ocr_res["confidence"],
-            "layout_data": json.dumps(ocr_res["boxes"]),
-            "is_scanned": True
-        })
+        pages.append(
+            {
+                "page_number": 1,
+                "raw_text": ocr_res["text"],
+                "clean_text": clean_text,
+                "ocr_confidence": ocr_res["confidence"],
+                "layout_data": json.dumps(ocr_res["boxes"]),
+                "is_scanned": True,
+            }
+        )
 
     # Detect headings & hierarchical sections across all pages
     sections = detect_sections(pages)
@@ -215,7 +232,7 @@ def extract_document_structure(file_bytes: bytes, file_type: str) -> Dict[str, A
         "sections": sections,
         "tables": tables,
         "clauses": clauses,
-        "page_count": len(pages)
+        "page_count": len(pages),
     }
 
 
@@ -226,11 +243,11 @@ def is_heading_line(line: str) -> bool:
         return False
     # Standard legal headings
     patterns = [
-        r'^(ARTICLE|SECTION|CLAUSE|PART|SCHEDULE|CHAPTER)\s+[0-9IVXLCDM\.]+',
-        r'^[0-9]{1,2}\.[0-9]{0,2}\s+[A-Z]',
-        r'^[0-9]{1,2}\.\s+[A-Z]',
-        r'^(WHEREAS|NOW THEREFORE|IN WITNESS WHEREOF|MEMORANDUM OF UNDERSTANDING)',
-        r'^[A-Z\s]{4,60}$'  # ALL CAPS TITLE
+        r"^(ARTICLE|SECTION|CLAUSE|PART|SCHEDULE|CHAPTER)\s+[0-9IVXLCDM\.]+",
+        r"^[0-9]{1,2}\.[0-9]{0,2}\s+[A-Z]",
+        r"^[0-9]{1,2}\.\s+[A-Z]",
+        r"^(WHEREAS|NOW THEREFORE|IN WITNESS WHEREOF|MEMORANDUM OF UNDERSTANDING)",
+        r"^[A-Z\s]{4,60}$",  # ALL CAPS TITLE
     ]
     for p in patterns:
         if re.search(p, clean, re.IGNORECASE):
@@ -248,21 +265,25 @@ def detect_sections(pages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         for line in lines:
             line_str = line.strip()
             if is_heading_line(line_str):
-                sections.append({
-                    "section_number": f"Sec-{sec_idx}",
-                    "section_title": line_str[:200],
-                    "start_page": p["page_number"],
-                    "end_page": p["page_number"]
-                })
+                sections.append(
+                    {
+                        "section_number": f"Sec-{sec_idx}",
+                        "section_title": line_str[:200],
+                        "start_page": p["page_number"],
+                        "end_page": p["page_number"],
+                    }
+                )
                 sec_idx += 1
 
     if not sections:
-        sections.append({
-            "section_number": "Sec-1",
-            "section_title": "General Covenants",
-            "start_page": 1,
-            "end_page": len(pages)
-        })
+        sections.append(
+            {
+                "section_number": "Sec-1",
+                "section_title": "General Covenants",
+                "start_page": 1,
+                "end_page": len(pages),
+            }
+        )
 
     return sections
 
@@ -299,25 +320,35 @@ def detect_clauses(pages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             is_unfair = False
             lower_para = para.lower()
 
-            if "18%" in lower_para or "compounding" in lower_para or "forfeit the entire deposit" in lower_para:
+            if (
+                "18%" in lower_para
+                or "compounding" in lower_para
+                or "forfeit the entire deposit" in lower_para
+            ):
                 risk_level = "CRITICAL"
                 is_unfair = True
-            elif "unilateral" in lower_para or "without notice" in lower_para or "restraint" in lower_para:
+            elif (
+                "unilateral" in lower_para
+                or "without notice" in lower_para
+                or "restraint" in lower_para
+            ):
                 risk_level = "HIGH"
                 is_unfair = True
             elif "penalty" in lower_para or "lock-in" in lower_para:
                 risk_level = "MEDIUM"
 
-            clauses.append({
-                "clause_identifier": f"C-{c_idx:02d}",
-                "title": f"{matched_cat} Provision",
-                "category": matched_cat,
-                "page_number": p["page_number"],
-                "raw_text": para,
-                "clean_text": para,
-                "risk_level": risk_level,
-                "is_unfair": is_unfair
-            })
+            clauses.append(
+                {
+                    "clause_identifier": f"C-{c_idx:02d}",
+                    "title": f"{matched_cat} Provision",
+                    "category": matched_cat,
+                    "page_number": p["page_number"],
+                    "raw_text": para,
+                    "clean_text": para,
+                    "risk_level": risk_level,
+                    "is_unfair": is_unfair,
+                }
+            )
             c_idx += 1
 
     return clauses
@@ -334,7 +365,7 @@ def format_table_markdown(rows: List[List[str]]) -> str:
     for r in rows[1:]:
         # Pad row to header length
         padded = r + [""] * (len(header) - len(r))
-        md_lines.append("| " + " | ".join(padded[:len(header)]) + " |")
+        md_lines.append("| " + " | ".join(padded[: len(header)]) + " |")
     return "\n".join(md_lines)
 
 
@@ -345,7 +376,7 @@ def chunk_document_with_provenance(
     content_hash: str,
     version_id: Optional[int] = None,
     target_chunk_size: int = 700,
-    overlap: int = 100
+    overlap: int = 100,
 ) -> List[Dict[str, Any]]:
     """
     Split pages into chunks while strictly preserving provenance:
@@ -379,43 +410,45 @@ def chunk_document_with_provenance(
                 current_chunk = f"{current_chunk}\n{para}".strip()
             else:
                 if current_chunk:
-                    chunks.append({
-                        "chunk_index": chunk_idx,
-                        "document_id": document_id,
-                        "version_id": version_id,
-                        "page_number": page_num,
-                        "section_title": section_title,
-                        "content_hash": content_hash,
-                        "content": current_chunk,
-                        "clean_content": current_chunk.strip(),
-                        "token_count": len(current_chunk.split())
-                    })
+                    chunks.append(
+                        {
+                            "chunk_index": chunk_idx,
+                            "document_id": document_id,
+                            "version_id": version_id,
+                            "page_number": page_num,
+                            "section_title": section_title,
+                            "content_hash": content_hash,
+                            "content": current_chunk,
+                            "clean_content": current_chunk.strip(),
+                            "token_count": len(current_chunk.split()),
+                        }
+                    )
                     chunk_idx += 1
                     current_chunk = current_chunk[-overlap:] + "\n" + para
                 else:
                     current_chunk = para
 
         if current_chunk.strip():
-            chunks.append({
-                "chunk_index": chunk_idx,
-                "document_id": document_id,
-                "version_id": version_id,
-                "page_number": page_num,
-                "section_title": section_title,
-                "content_hash": content_hash,
-                "content": current_chunk,
-                "clean_content": current_chunk.strip(),
-                "token_count": len(current_chunk.split())
-            })
+            chunks.append(
+                {
+                    "chunk_index": chunk_idx,
+                    "document_id": document_id,
+                    "version_id": version_id,
+                    "page_number": page_num,
+                    "section_title": section_title,
+                    "content_hash": content_hash,
+                    "content": current_chunk,
+                    "clean_content": current_chunk.strip(),
+                    "token_count": len(current_chunk.split()),
+                }
+            )
             chunk_idx += 1
 
     return chunks
 
 
 def chunk_document_text(
-    pages: List[Tuple[int, str]],
-    target_chunk_size: int = 700,
-    overlap: int = 100
+    pages: List[Tuple[int, str]], target_chunk_size: int = 700, overlap: int = 100
 ) -> List[dict]:
     """Backwards compatibility chunker for tests expecting simple page tuple input."""
     chunks = []
@@ -430,26 +463,30 @@ def chunk_document_text(
                 current_chunk = f"{current_chunk}\n{para}".strip()
             else:
                 if current_chunk:
-                    chunks.append({
-                        "chunk_index": chunk_idx,
-                        "page_number": page_num,
-                        "content": current_chunk,
-                        "clean_content": current_chunk.strip(),
-                        "token_count": len(current_chunk.split())
-                    })
+                    chunks.append(
+                        {
+                            "chunk_index": chunk_idx,
+                            "page_number": page_num,
+                            "content": current_chunk,
+                            "clean_content": current_chunk.strip(),
+                            "token_count": len(current_chunk.split()),
+                        }
+                    )
                     chunk_idx += 1
                     current_chunk = current_chunk[-overlap:] + "\n" + para
                 else:
                     current_chunk = para
 
         if current_chunk.strip():
-            chunks.append({
-                "chunk_index": chunk_idx,
-                "page_number": page_num,
-                "content": current_chunk,
-                "clean_content": current_chunk.strip(),
-                "token_count": len(current_chunk.split())
-            })
+            chunks.append(
+                {
+                    "chunk_index": chunk_idx,
+                    "page_number": page_num,
+                    "content": current_chunk,
+                    "clean_content": current_chunk.strip(),
+                    "token_count": len(current_chunk.split()),
+                }
+            )
             chunk_idx += 1
 
     return chunks

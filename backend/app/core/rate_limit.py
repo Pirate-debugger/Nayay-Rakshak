@@ -1,5 +1,6 @@
 import logging
 from typing import Optional
+
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -15,17 +16,19 @@ def create_limiter(storage_uri: Optional[str] = None) -> Limiter:
         lim = Limiter(
             key_func=get_remote_address,
             default_limits=[settings.RATE_LIMIT_DEFAULT],
-            storage_uri=uri
+            storage_uri=uri,
         )
         if storage_uri:
             logger.info(f"Distributed Redis rate limiting initialized with URI: {storage_uri}")
         return lim
     except Exception as e:
-        logger.warning(f"Failed to initialize rate limiter with storage_uri '{uri}': {e}. Falling back to in-memory limiter.")
+        logger.warning(
+            f"Failed to initialize rate limiter with storage_uri '{uri}': {e}. Falling back to in-memory limiter."
+        )
         return Limiter(
             key_func=get_remote_address,
             default_limits=[settings.RATE_LIMIT_DEFAULT],
-            storage_uri="memory://"
+            storage_uri="memory://",
         )
 
 

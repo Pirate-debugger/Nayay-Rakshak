@@ -3,10 +3,8 @@ NYAYA-BENCH Reporter & Regression Comparator
 Generates auditable Markdown reports and checks regression diffs between benchmark runs.
 """
 
-from datetime import datetime, timezone
 import json
-import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 
 def generate_markdown_report(result: Dict[str, Any]) -> str:
@@ -24,7 +22,7 @@ def generate_markdown_report(result: Dict[str, Any]) -> str:
         "\n---\n",
         "## 1. Measured Metric Dimensions (Zero Fabricated Scores)",
         "| Metric Dimension | Measured Score | Required Threshold | Status |",
-        "|---|---|---|---|"
+        "|---|---|---|---|",
     ]
 
     thresholds = {
@@ -38,7 +36,7 @@ def generate_markdown_report(result: Dict[str, Any]) -> str:
         "clause_extraction_accuracy": (0.80, ">="),
         "risk_detection_precision": (0.80, ">="),
         "risk_detection_recall": (0.80, ">="),
-        "comparison_accuracy": (0.80, ">=")
+        "comparison_accuracy": (0.80, ">="),
     }
 
     for metric_name, score in metrics.items():
@@ -61,7 +59,9 @@ def generate_markdown_report(result: Dict[str, Any]) -> str:
     for c in cases:
         status_icon = "PASS" if c["passed"] else "FAIL"
         details_str = json.dumps(c["details"]).replace("|", "\\|")
-        lines.append(f"| `{c['id']}` | {c['category']} | {c['difficulty']} | {status_icon} | {details_str[:60]}... |")
+        lines.append(
+            f"| `{c['id']}` | {c['category']} | {c['difficulty']} | {status_icon} | {details_str[:60]}... |"
+        )
 
     if summary["ci_failures"]:
         lines.append("\n---\n")
@@ -70,7 +70,9 @@ def generate_markdown_report(result: Dict[str, Any]) -> str:
             lines.append(f"- ❌ **{fail}**")
 
     lines.append("\n---\n")
-    lines.append("*Generated automatically by NYAYA-BENCH. AI answers grounded in official statutes and verified contract chunks.*")
+    lines.append(
+        "*Generated automatically by NYAYA-BENCH. AI answers grounded in official statutes and verified contract chunks.*"
+    )
 
     return "\n".join(lines)
 
@@ -85,7 +87,7 @@ def compare_runs(baseline_report: Dict[str, Any], current_report: Dict[str, Any]
         f"**Baseline Version:** {baseline_report.get('dataset_version', 'v1.0')} ({baseline_report.get('timestamp', '')})  ",
         f"**Current Version:** {current_report.get('dataset_version', 'v1.0')} ({current_report.get('timestamp', '')})  ",
         "\n| Metric | Baseline | Current | Delta | Verdict |",
-        "|---|---|---|---|---|"
+        "|---|---|---|---|---|",
     ]
 
     all_keys = sorted(set(b_metrics.keys()).union(set(c_metrics.keys())))
@@ -95,10 +97,18 @@ def compare_runs(baseline_report: Dict[str, Any], current_report: Dict[str, Any]
         diff = c_val - b_val
         if k == "unsupported_claim_rate":
             # Lower is better
-            verdict = "🟢 Improved" if diff < -0.001 else ("🔴 Regressed" if diff > 0.001 else "⚪ Unchanged")
+            verdict = (
+                "🟢 Improved"
+                if diff < -0.001
+                else ("🔴 Regressed" if diff > 0.001 else "⚪ Unchanged")
+            )
         else:
             # Higher is better
-            verdict = "🟢 Improved" if diff > 0.001 else ("🔴 Regressed" if diff < -0.001 else "⚪ Unchanged")
+            verdict = (
+                "🟢 Improved"
+                if diff > 0.001
+                else ("🔴 Regressed" if diff < -0.001 else "⚪ Unchanged")
+            )
 
         diff_str = f"+{diff:.4f}" if diff > 0 else f"{diff:.4f}"
         lines.append(f"| `{k}` | {b_val:.4f} | {c_val:.4f} | {diff_str} | {verdict} |")

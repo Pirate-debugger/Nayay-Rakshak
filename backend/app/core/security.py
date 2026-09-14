@@ -20,10 +20,7 @@ def get_password_hash(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its bcrypt hash in constant time."""
     try:
-        return bcrypt.checkpw(
-            plain_password.encode("utf-8"),
-            hashed_password.encode("utf-8")
-        )
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
     except Exception:
         return False
 
@@ -39,11 +36,11 @@ def validate_password_strength(password: str) -> Tuple[bool, str]:
     """
     if len(password) < 8:
         return False, "Password must be at least 8 characters long."
-    if not re.search(r'[A-Z]', password):
+    if not re.search(r"[A-Z]", password):
         return False, "Password must contain at least one uppercase letter (A-Z)."
-    if not re.search(r'[a-z]', password):
+    if not re.search(r"[a-z]", password):
         return False, "Password must contain at least one lowercase letter (a-z)."
-    if not re.search(r'[0-9]', password):
+    if not re.search(r"[0-9]", password):
         return False, "Password must contain at least one numerical digit (0-9)."
     if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-\+=]', password):
         return False, "Password must contain at least one special character (!@#$%^&*...)."
@@ -65,14 +62,18 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
     to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc)})
 
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
-def create_refresh_token(user_id: int, family_id: Optional[str] = None) -> Tuple[str, str, str, datetime]:
+def create_refresh_token(
+    user_id: int, family_id: Optional[str] = None
+) -> Tuple[str, str, str, datetime]:
     """
     Create a signed JWT refresh token with token rotation family ID.
     Returns (raw_jwt, token_hash, family_id, expires_at).
@@ -87,7 +88,7 @@ def create_refresh_token(user_id: int, family_id: Optional[str] = None) -> Tuple
         "family_id": fam_id,
         "token_type": "refresh",
         "iat": datetime.now(timezone.utc),
-        "exp": expires_at
+        "exp": expires_at,
     }
 
     raw_jwt = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)

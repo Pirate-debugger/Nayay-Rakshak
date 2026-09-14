@@ -7,7 +7,7 @@ async def test_citizen_brief_generation_and_export(client, auth_headers):
     load_res = await client.post(
         "/api/v1/documents/load-sample",
         data={"sample_key": "harsh_landlord_lease_delhi"},
-        headers=auth_headers
+        headers=auth_headers,
     )
     doc_id = load_res.json()["id"]
 
@@ -17,9 +17,11 @@ async def test_citizen_brief_generation_and_export(client, auth_headers):
         json={
             "document_id": doc_id,
             "client_name": "Ananya Iyer",
-            "specific_questions": ["Can the landlord forfeit my entire security deposit if I leave at 8 months?"]
+            "specific_questions": [
+                "Can the landlord forfeit my entire security deposit if I leave at 8 months?"
+            ],
         },
-        headers=auth_headers
+        headers=auth_headers,
     )
     assert brief_res.status_code == 201
     brief_data = brief_res.json()

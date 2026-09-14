@@ -5,14 +5,17 @@ Categorizes claims by type: FACTUAL, LEGAL_STATUTORY, LEGAL_PRECEDENT, CONTRACTU
 """
 
 import re
-from typing import Dict, List
+from typing import List
+
 from app.schemas.verification import ClaimType
 
 
 class ExtractedClaim:
     """Atomic claim extracted from draft text for verification."""
 
-    def __init__(self, claim_id: str, claim_text: str, claim_type: ClaimType, cited_references: List[str]):
+    def __init__(
+        self, claim_id: str, claim_text: str, claim_type: ClaimType, cited_references: List[str]
+    ):
         self.claim_id = claim_id
         self.claim_text = claim_text
         self.claim_type = claim_type
@@ -28,7 +31,9 @@ class ClaimExtractor:
         Extracts cited statutes, cases, or clauses.
         """
         # Protect legal abbreviations (v., vs., sec., ltd., etc.) from premature sentence splitting
-        protected = re.sub(r"\b(v|vs|sec|ltd|pvt|co|no|art)\.\s+", r"\1_DOT_ ", text, flags=re.IGNORECASE)
+        protected = re.sub(
+            r"\b(v|vs|sec|ltd|pvt|co|no|art)\.\s+", r"\1_DOT_ ", text, flags=re.IGNORECASE
+        )
         raw_sentences = [
             s.replace("_DOT_", ".").strip()
             for s in re.split(r"(?<=[.?!])\s+", protected)
@@ -39,29 +44,39 @@ class ClaimExtractor:
         for idx, s in enumerate(raw_sentences):
             # Exclude boilerplate disclaimers or conversational greetings
             s_lower = s.lower()
-            if any(skip in s_lower for skip in [
-                "consult a qualified lawyer", "does not constitute legal advice", "hello", "here is what"
-            ]):
+            if any(
+                skip in s_lower
+                for skip in [
+                    "consult a qualified lawyer",
+                    "does not constitute legal advice",
+                    "hello",
+                    "here is what",
+                ]
+            ):
                 continue
 
-            claim_id = f"CLAIM-{idx+1:03d}"
+            claim_id = f"CLAIM-{idx + 1:03d}"
             claim_type, citations = self._classify_and_extract_citations(s)
-            claims.append(ExtractedClaim(
-                claim_id=claim_id,
-                claim_text=s,
-                claim_type=claim_type,
-                cited_references=citations
-            ))
+            claims.append(
+                ExtractedClaim(
+                    claim_id=claim_id,
+                    claim_text=s,
+                    claim_type=claim_type,
+                    cited_references=citations,
+                )
+            )
 
         # Fallback if no sentences extracted
         if not claims and len(text.strip()) > 10:
             claim_type, citations = self._classify_and_extract_citations(text)
-            claims.append(ExtractedClaim(
-                claim_id="CLAIM-001",
-                claim_text=text.strip(),
-                claim_type=claim_type,
-                cited_references=citations
-            ))
+            claims.append(
+                ExtractedClaim(
+                    claim_id="CLAIM-001",
+                    claim_text=text.strip(),
+                    claim_type=claim_type,
+                    cited_references=citations,
+                )
+            )
 
         return claims
 
@@ -81,7 +96,9 @@ class ClaimExtractor:
         for m in re.finditer(case_pattern, sentence):
             matched_str = m.group(0).strip()
             # Strip leading prepositions like "Under "
-            cleaned = re.sub(r"^(?:under|in|per|see)\s+", "", matched_str, flags=re.IGNORECASE).strip()
+            cleaned = re.sub(
+                r"^(?:under|in|per|see)\s+", "", matched_str, flags=re.IGNORECASE
+            ).strip()
             if len(cleaned) > 4:
                 citations.append(cleaned)
 
@@ -95,9 +112,15 @@ class ClaimExtractor:
             claim_type = ClaimType.LEGAL_PRECEDENT
         elif any(k in s_lower for k in ["section", "article", "act", "sanhita", "code"]):
             claim_type = ClaimType.LEGAL_STATUTORY
-        elif any("clause" in c.lower() for c in citations) or any(k in s_lower for k in ["your agreement", "your lease", "the contract states", "in this document"]):
+        elif any("clause" in c.lower() for c in citations) or any(
+            k in s_lower
+            for k in ["your agreement", "your lease", "the contract states", "in this document"]
+        ):
             claim_type = ClaimType.CONTRACTUAL_TERM
-        elif any(k in s_lower for k in ["file an e-fir", "complaint portal", "court procedure", "online filing"]):
+        elif any(
+            k in s_lower
+            for k in ["file an e-fir", "complaint portal", "court procedure", "online filing"]
+        ):
             claim_type = ClaimType.PROCEDURAL
         else:
             claim_type = ClaimType.FACTUAL

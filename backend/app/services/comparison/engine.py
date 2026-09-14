@@ -1,18 +1,16 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from app.schemas.comparison import (
     ClauseDiffItem,
     ComparisonCategory,
     ComparisonFindingItem,
     ComparisonResponse,
-    DifferenceDimension,
     MaterialityLevel,
     RiskDeltaSummary,
-    StructuralDiff,
 )
 from app.services.comparison.difference_analyzer import analyze_aligned_clause_pair
 from app.services.comparison.matcher import match_document_clauses
-from app.services.comparison.segmenter import ComparisonClause, segment_document_for_comparison
+from app.services.comparison.segmenter import segment_document_for_comparison
 
 
 class SemanticComparisonEngine:
@@ -31,20 +29,20 @@ class SemanticComparisonEngine:
         target_title: str,
         target_text: str,
         base_chunks: Optional[List[Any]] = None,
-        target_chunks: Optional[List[Any]] = None
+        target_chunks: Optional[List[Any]] = None,
     ) -> ComparisonResponse:
         # 1. Segment both documents
         clauses_a = segment_document_for_comparison(
             text=base_text,
             document_id=base_document_id,
             document_title=base_title,
-            chunks=base_chunks
+            chunks=base_chunks,
         )
         clauses_b = segment_document_for_comparison(
             text=target_text,
             document_id=target_document_id,
             document_title=target_title,
-            chunks=target_chunks
+            chunks=target_chunks,
         )
 
         # 2. Bipartite clause matching and structural diff
@@ -62,16 +60,23 @@ class SemanticComparisonEngine:
             findings.append(finding)
             dimensions_set.add(finding.dimension.value)
 
-            if finding.materiality == MaterialityLevel.CRITICAL or finding.category == ComparisonCategory.CONFLICTING:
+            if (
+                finding.materiality == MaterialityLevel.CRITICAL
+                or finding.category == ComparisonCategory.CONFLICTING
+            ):
                 target_high_risks += 1
                 critical_warnings.append(f"{finding.title}: {finding.difference_explanation}")
-            elif finding.materiality == MaterialityLevel.MATERIAL and finding.category in [ComparisonCategory.MODIFIED, ComparisonCategory.NEW]:
+            elif finding.materiality == MaterialityLevel.MATERIAL and finding.category in [
+                ComparisonCategory.MODIFIED,
+                ComparisonCategory.NEW,
+            ]:
                 target_high_risks += 1
 
         # Check if documents are completely different
-        is_completely_different = (
-            structural_diff.aligned_clause_count == 0
-            or (structural_diff.structural_alignment_score < 0.15 and len(clauses_a) > 2 and len(clauses_b) > 2)
+        is_completely_different = structural_diff.aligned_clause_count == 0 or (
+            structural_diff.structural_alignment_score < 0.15
+            and len(clauses_a) > 2
+            and len(clauses_b) > 2
         )
 
         # 4. Synthesize overall verdict
@@ -82,11 +87,17 @@ class SemanticComparisonEngine:
                 f"Structural alignment is only {structural_diff.structural_alignment_score * 100:.0f}%, "
                 f"with {structural_diff.missing_in_b_count} clauses unique to '{base_title}' and {structural_diff.new_in_b_count} clauses unique to '{target_title}'."
             )
-            critical_warnings.insert(0, "Warning: These two documents are completely different legal instruments with almost no common clauses.")
+            critical_warnings.insert(
+                0,
+                "Warning: These two documents are completely different legal instruments with almost no common clauses.",
+            )
         elif all(f.category == ComparisonCategory.IDENTICAL for f in findings):
             net_verdict = "IDENTICAL"
             overall_verdict = f"Documents '{base_title}' and '{target_title}' are semantically identical with zero material discrepancies across all {len(findings)} evaluated clauses."
-        elif all(f.category in [ComparisonCategory.IDENTICAL, ComparisonCategory.SIMILAR] for f in findings):
+        elif all(
+            f.category in [ComparisonCategory.IDENTICAL, ComparisonCategory.SIMILAR]
+            for f in findings
+        ):
             net_verdict = "BALANCED"
             overall_verdict = f"Documents '{base_title}' and '{target_title}' share substantially identical legal covenants with only minor stylistic variations and no material risk variance."
         elif target_high_risks > base_high_risks:
@@ -103,7 +114,7 @@ class SemanticComparisonEngine:
             base_high_risks=base_high_risks,
             target_high_risks=target_high_risks,
             net_risk_verdict=net_verdict,
-            critical_warnings=critical_warnings
+            critical_warnings=critical_warnings,
         )
 
         # 5. Assemble backwards-compatible ClauseDiffItem list
@@ -129,14 +140,16 @@ class SemanticComparisonEngine:
             b_text = f.document_a_evidence.verbatim_quote if f.document_a_evidence else None
             t_text = f.document_b_evidence.verbatim_quote if f.document_b_evidence else None
 
-            clause_diffs.append(ClauseDiffItem(
-                category=f.title,
-                change_type=change_type_map.get(f.category, "MODIFIED"),
-                base_text=b_text,
-                target_text=t_text,
-                risk_delta=risk_delta_map.get(f.materiality, "NEUTRAL"),
-                impact_analysis=f.risk_implications or f.difference_explanation
-            ))
+            clause_diffs.append(
+                ClauseDiffItem(
+                    category=f.title,
+                    change_type=change_type_map.get(f.category, "MODIFIED"),
+                    base_text=b_text,
+                    target_text=t_text,
+                    risk_delta=risk_delta_map.get(f.materiality, "NEUTRAL"),
+                    impact_analysis=f.risk_implications or f.difference_explanation,
+                )
+            )
 
         return ComparisonResponse(
             base_document_id=base_document_id,
@@ -148,7 +161,7 @@ class SemanticComparisonEngine:
             clause_diffs=clause_diffs,
             structural_diff=structural_diff,
             findings=findings,
-            dimensions_analyzed=sorted(list(dimensions_set))
+            dimensions_analyzed=sorted(list(dimensions_set)),
         )
 
 
@@ -160,7 +173,7 @@ def compare_legal_documents(
     target_title: str,
     target_text: str,
     base_chunks: Optional[List[Any]] = None,
-    target_chunks: Optional[List[Any]] = None
+    target_chunks: Optional[List[Any]] = None,
 ) -> ComparisonResponse:
     """Convenience helper function to run semantic comparison."""
     engine = SemanticComparisonEngine()
@@ -172,5 +185,5 @@ def compare_legal_documents(
         target_title=target_title,
         target_text=target_text,
         base_chunks=base_chunks,
-        target_chunks=target_chunks
+        target_chunks=target_chunks,
     )

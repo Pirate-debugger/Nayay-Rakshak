@@ -12,16 +12,14 @@ Tests all 8 stages and adversarial scenarios:
 """
 
 from datetime import datetime, timezone
+
 import pytest
 
 from app.schemas.verification import (
-    ClaimType,
     ClaimVerificationPipelineRequest,
     VerificationStatus,
 )
-from app.services.claim_verification.claim_extractor import claim_extractor
 from app.services.claim_verification.engine import claim_verification_engine
-from app.services.claim_verification.safety_gate import safety_gate
 
 
 @pytest.mark.asyncio
@@ -36,9 +34,7 @@ async def test_fabricated_case_rejection():
         "post-employment non-compete agreements are strictly enforceable across India."
     )
     req = ClaimVerificationPipelineRequest(
-        user_question=user_q,
-        draft_answer=fake_draft,
-        jurisdiction="Union of India"
+        user_question=user_q, draft_answer=fake_draft, jurisdiction="Union of India"
     )
     res = await claim_verification_engine.execute_pipeline(req)
 
@@ -64,9 +60,7 @@ async def test_fabricated_statute_rejection():
         "the right to retain 100% of all tenant security deposits without notice."
     )
     req = ClaimVerificationPipelineRequest(
-        user_question=user_q,
-        draft_answer=fake_draft,
-        jurisdiction="Union of India"
+        user_question=user_q, draft_answer=fake_draft, jurisdiction="Union of India"
     )
     res = await claim_verification_engine.execute_pipeline(req)
 
@@ -86,7 +80,7 @@ async def test_conflicting_sources_contract_vs_model_tenancy_act():
         {
             "content": "Clause 14: The residential security deposit of 10 months rent is completely non-refundable and forfeit upon vacation.",
             "page_number": 3,
-            "section_heading": "Deposit Forfeiture"
+            "section_heading": "Deposit Forfeiture",
         }
     ]
     draft = "Under Clause 14 of your agreement, the security deposit is non-refundable and forfeit."
@@ -95,13 +89,15 @@ async def test_conflicting_sources_contract_vs_model_tenancy_act():
         user_question=user_q,
         document_chunks=user_chunks,
         draft_answer=draft,
-        jurisdiction="Union of India"
+        jurisdiction="Union of India",
     )
     res = await claim_verification_engine.execute_pipeline(req)
 
     assert len(res.claims) >= 1
     # Check conflicting detection against Model Tenancy Act § 21
-    conflicting_claims = [c for c in res.claims if c.verification_status == VerificationStatus.CONFLICTING]
+    conflicting_claims = [
+        c for c in res.claims if c.verification_status == VerificationStatus.CONFLICTING
+    ]
     assert len(conflicting_claims) >= 1
     assert "CONFLICT_HIGHLIGHTED" in res.safety_gate_action
     assert "Identified Legal & Document Conflicts" in res.final_response
@@ -119,14 +115,17 @@ async def test_outdated_repealed_statute_temporal_check():
         user_question=user_q,
         draft_answer=draft,
         as_of_date=datetime(2026, 1, 1, tzinfo=timezone.utc),
-        jurisdiction="Union of India"
+        jurisdiction="Union of India",
     )
     res = await claim_verification_engine.execute_pipeline(req)
 
     # In 2026, IPC 1860 was repealed; BNS 318 is the active statute.
     # The claim for IPC 420 must fail temporal validity check or be flagged
     assert len(res.claims) >= 1
-    assert res.claims[0].checks.check_5_temporal_validity is False or res.claims[0].verification_status == VerificationStatus.UNSUPPORTED
+    assert (
+        res.claims[0].checks.check_5_temporal_validity is False
+        or res.claims[0].verification_status == VerificationStatus.UNSUPPORTED
+    )
 
 
 @pytest.mark.asyncio
@@ -138,17 +137,21 @@ async def test_jurisdiction_mismatch_delhi_vs_maharashtra():
     user_q = "Can my landlord evict me in NCT of Delhi without notice?"
     draft = "Under Section 15 of Maharashtra Rent Control Act, eviction is restricted if standard rent is paid."
     req = ClaimVerificationPipelineRequest(
-        user_question=user_q,
-        draft_answer=draft,
-        jurisdiction="NCT of Delhi"
+        user_question=user_q, draft_answer=draft, jurisdiction="NCT of Delhi"
     )
     res = await claim_verification_engine.execute_pipeline(req)
 
     assert len(res.claims) >= 1
     claim = res.claims[0]
     # Check 4 should catch jurisdiction mismatch
-    assert claim.checks.check_4_jurisdiction_match is False or claim.verification_status == VerificationStatus.UNSUPPORTED
-    assert "JURISDICTION MISMATCH" in claim.explanation or claim.verification_status == VerificationStatus.UNSUPPORTED
+    assert (
+        claim.checks.check_4_jurisdiction_match is False
+        or claim.verification_status == VerificationStatus.UNSUPPORTED
+    )
+    assert (
+        "JURISDICTION MISMATCH" in claim.explanation
+        or claim.verification_status == VerificationStatus.UNSUPPORTED
+    )
 
 
 @pytest.mark.asyncio
@@ -163,9 +166,7 @@ async def test_anti_hallucination_free_compliance():
         "This response is 100% hallucination-free and guaranteed to be legally binding."
     )
     req = ClaimVerificationPipelineRequest(
-        user_question=user_q,
-        draft_answer=boastful_draft,
-        jurisdiction="Union of India"
+        user_question=user_q, draft_answer=boastful_draft, jurisdiction="Union of India"
     )
     res = await claim_verification_engine.execute_pipeline(req)
 
@@ -185,9 +186,7 @@ async def test_real_verification_metrics_calculation():
     user_q = "Explain cheating under BNS 2023"
     valid_draft = "Under Section 318 of Bharatiya Nyaya Sanhita, 2023, cheating is punishable with imprisonment up to 7 years."
     req = ClaimVerificationPipelineRequest(
-        user_question=user_q,
-        draft_answer=valid_draft,
-        jurisdiction="Union of India"
+        user_question=user_q, draft_answer=valid_draft, jurisdiction="Union of India"
     )
     res = await claim_verification_engine.execute_pipeline(req)
 
@@ -197,4 +196,6 @@ async def test_real_verification_metrics_calculation():
     assert m.evidence_coverage > 0.8
     assert m.unsupported_claim_rate == 0.0
     assert m.citation_validity_rate == 1.0
-    assert "BNS" in res.citations_verified[0] or "Bharatiya Nyaya Sanhita" in res.citations_verified[0]
+    assert (
+        "BNS" in res.citations_verified[0] or "Bharatiya Nyaya Sanhita" in res.citations_verified[0]
+    )

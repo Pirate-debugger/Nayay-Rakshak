@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -11,11 +11,12 @@ from app.api.deps import get_ai, get_current_user
 from app.core.audit import log_audit_event
 from app.core.authorization import authorize_object_access
 from app.core.config import settings
-from app.core.exceptions import ObjectNotFoundError, UnauthorizedAccessError
+from app.core.exceptions import ObjectNotFoundError
 from app.core.rate_limit import limiter
 from app.core.roles import Action
 from app.db.base import get_db
 from app.db.models import AnalysisResult, Document, DocumentChunk, User
+from app.schemas.action_navigator import ActionNavigatorResponse
 from app.schemas.analysis import (
     AnalysisResponse,
     ClauseItem,
@@ -23,7 +24,6 @@ from app.schemas.analysis import (
     ObligationItem,
     RiskItem,
 )
-from app.schemas.action_navigator import ActionNavigatorResponse
 from app.schemas.clause_intelligence import StructuredClauseRecord
 from app.schemas.risk import RiskEngineResult, RuleVersionInfo
 from app.services.action_navigator import ActionNavigatorEngine
@@ -39,21 +39,26 @@ _action_navigator_engine = ActionNavigatorEngine()
 router = APIRouter(prefix="/analysis", tags=["Legal Analysis & Clause Intelligence"])
 
 
-
 class SingleClauseExtractRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    clause_text: str = Field(..., min_length=10, max_length=15000, description="Raw text of the clause to analyze")
-    clause_id: Optional[str] = Field("C-01", max_length=50, description="Optional identifier for the clause")
+    clause_text: str = Field(
+        ..., min_length=10, max_length=15000, description="Raw text of the clause to analyze"
+    )
+    clause_id: Optional[str] = Field(
+        "C-01", max_length=50, description="Optional identifier for the clause"
+    )
     page_number: Optional[int] = Field(1, ge=1, description="Page number of the clause")
-    section_name: Optional[str] = Field("General Covenants", max_length=150, description="Section or title of the clause")
-    document_category: Optional[str] = Field(None, max_length=50, description="Optional category hint (e.g. rental, employment, nda)")
-
+    section_name: Optional[str] = Field(
+        "General Covenants", max_length=150, description="Section or title of the clause"
+    )
+    document_category: Optional[str] = Field(
+        None, max_length=50, description="Optional category hint (e.g. rental, employment, nda)"
+    )
 
 
 @router.post("/clause/extract", response_model=StructuredClauseRecord)
 async def extract_single_clause_intelligence(
-    payload: SingleClauseExtractRequest,
-    current_user: User = Depends(get_current_user)
+    payload: SingleClauseExtractRequest, current_user: User = Depends(get_current_user)
 ):
     """
     On-demand Clause Intelligence extraction on an arbitrary clause.
@@ -64,7 +69,7 @@ async def extract_single_clause_intelligence(
         clause_id=payload.clause_id or "C-01",
         raw_text=payload.clause_text,
         page_number=payload.page_number or 1,
-        section_name=payload.section_name or "General Covenants"
+        section_name=payload.section_name or "General Covenants",
     )
     return record
 
@@ -74,7 +79,7 @@ async def get_document_structured_clauses(
     document_id: int,
     request: Request,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Extract all legally meaningful clauses from the document into structured, explainable records.
@@ -88,20 +93,20 @@ async def get_document_structured_clauses(
     if not doc:
         raise ObjectNotFoundError("Document")
 
-    authorize_object_access(
-        user=current_user,
-        resource=doc,
-        action=Action.READ
-    )
+    authorize_object_access(user=current_user, resource=doc, action=Action.READ)
 
-    chunk_query = select(DocumentChunk).where(DocumentChunk.document_id == doc.id).order_by(DocumentChunk.chunk_index)
+    chunk_query = (
+        select(DocumentChunk)
+        .where(DocumentChunk.document_id == doc.id)
+        .order_by(DocumentChunk.chunk_index)
+    )
     chunk_res = await db.execute(chunk_query)
     chunks = chunk_res.scalars().all()
 
     if not chunks:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document has no content chunks available for clause intelligence."
+            detail="Document has no content chunks available for clause intelligence.",
         )
 
     full_text = "\n\n".join([c.clean_content for c in chunks])
@@ -116,7 +121,7 @@ async def analyze_document_endpoint(
     request: Request,
     current_user: User = Depends(get_current_user),
     ai_provider: BaseAIProvider = Depends(get_ai),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Perform deep legal analysis:
@@ -133,25 +138,24 @@ async def analyze_document_endpoint(
     if not doc:
         raise ObjectNotFoundError("Document")
 
-    authorize_object_access(
-        user=current_user,
-        resource=doc,
-        action=Action.READ
-    )
+    authorize_object_access(user=current_user, resource=doc, action=Action.READ)
 
     # Fetch document chunks
-    chunk_query = select(DocumentChunk).where(DocumentChunk.document_id == doc.id).order_by(DocumentChunk.chunk_index)
+    chunk_query = (
+        select(DocumentChunk)
+        .where(DocumentChunk.document_id == doc.id)
+        .order_by(DocumentChunk.chunk_index)
+    )
     chunk_res = await db.execute(chunk_query)
     chunks = chunk_res.scalars().all()
 
     if not chunks:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document has no content chunks available for analysis."
+            detail="Document has no content chunks available for analysis.",
         )
 
     full_text = "\n\n".join([c.clean_content for c in chunks])
-
 
     # Run AI Analysis
     raw_analysis = await ai_provider.analyze_document(full_text, doc.title)
@@ -191,7 +195,7 @@ async def analyze_document_endpoint(
             risks_json=risks_json,
             obligations_json=obligations_json,
             missing_clauses_json=missing_json,
-            flesch_kincaid_score=raw_analysis.get("flesch_kincaid_score", 55.0)
+            flesch_kincaid_score=raw_analysis.get("flesch_kincaid_score", 55.0),
         )
         db.add(new_analysis)
 
@@ -204,7 +208,7 @@ async def analyze_document_endpoint(
         target_id=doc.id,
         ip_address=request.client.host if request.client else None,
         status="SUCCESS",
-        details={"clauses_count": len(clauses), "risks_count": len(risks)}
+        details={"clauses_count": len(clauses), "risks_count": len(risks)},
     )
 
     return AnalysisResponse(
@@ -217,15 +221,16 @@ async def analyze_document_endpoint(
         clauses=clauses,
         risks=risks,
         obligations=obligations,
-        missing_clauses=missing
+        missing_clauses=missing,
     )
+
 
 @router.get("/{document_id}", response_model=AnalysisResponse)
 async def get_analysis(
     document_id: int,
     request: Request,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Retrieve existing cached analysis for a document."""
     doc_query = select(Document).where(Document.id == document_id)
@@ -235,11 +240,7 @@ async def get_analysis(
     if not doc:
         raise ObjectNotFoundError("Document")
 
-    authorize_object_access(
-        user=current_user,
-        resource=doc,
-        action=Action.READ
-    )
+    authorize_object_access(user=current_user, resource=doc, action=Action.READ)
 
     q = select(AnalysisResult).where(AnalysisResult.document_id == doc.id)
     res = await db.execute(q)
@@ -248,7 +249,7 @@ async def get_analysis(
     if not analysis:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Analysis has not yet been run for this document. Please trigger POST /analysis/{document_id}."
+            detail="Analysis has not yet been run for this document. Please trigger POST /analysis/{document_id}.",
         )
 
     clauses = [ClauseItem(**c) for c in json.loads(analysis.clauses_json)]
@@ -266,7 +267,7 @@ async def get_analysis(
         clauses=clauses,
         risks=risks,
         obligations=obligations,
-        missing_clauses=missing
+        missing_clauses=missing,
     )
 
 
@@ -275,7 +276,7 @@ async def get_document_checklist(
     document_id: int,
     request: Request,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Get tailored procedural action checklist based on document content."""
     doc_query = select(Document).where(Document.id == document_id)
@@ -285,19 +286,22 @@ async def get_document_checklist(
     if not doc:
         raise ObjectNotFoundError("Document")
 
-    authorize_object_access(
-        user=current_user,
-        resource=doc,
-        action=Action.READ
-    )
+    authorize_object_access(user=current_user, resource=doc, action=Action.READ)
 
     return get_action_checklist(doc.title)
 
 
 class RiskEvaluateTextRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    text: str = Field(..., min_length=10, max_length=50000, description="Legal text or clause to evaluate for risks")
-    document_title: Optional[str] = Field("Ad-hoc Document", max_length=200, description="Optional title or context")
+    text: str = Field(
+        ...,
+        min_length=10,
+        max_length=50000,
+        description="Legal text or clause to evaluate for risks",
+    )
+    document_title: Optional[str] = Field(
+        "Ad-hoc Document", max_length=200, description="Optional title or context"
+    )
 
 
 @router.post("/{document_id}/risk-engine", response_model=RiskEngineResult)
@@ -306,7 +310,7 @@ async def evaluate_document_risks_endpoint(
     request: Request,
     current_user: User = Depends(get_current_user),
     ai_provider: BaseAIProvider = Depends(get_ai),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Execute the NYAYA RAKSHAK Deterministic + AI-Assisted Risk Engine on a document.
@@ -320,20 +324,20 @@ async def evaluate_document_risks_endpoint(
     if not doc:
         raise ObjectNotFoundError("Document")
 
-    authorize_object_access(
-        user=current_user,
-        resource=doc,
-        action=Action.READ
-    )
+    authorize_object_access(user=current_user, resource=doc, action=Action.READ)
 
-    chunk_query = select(DocumentChunk).where(DocumentChunk.document_id == doc.id).order_by(DocumentChunk.chunk_index)
+    chunk_query = (
+        select(DocumentChunk)
+        .where(DocumentChunk.document_id == doc.id)
+        .order_by(DocumentChunk.chunk_index)
+    )
     chunk_res = await db.execute(chunk_query)
     chunks = chunk_res.scalars().all()
 
     if not chunks:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document has no content chunks available for risk analysis."
+            detail="Document has no content chunks available for risk analysis.",
         )
 
     full_text = "\n\n".join([c.clean_content for c in chunks])
@@ -341,7 +345,7 @@ async def evaluate_document_risks_endpoint(
         document_text=full_text,
         document_id=doc.id,
         document_title=doc.title,
-        ai_provider=ai_provider
+        ai_provider=ai_provider,
     )
 
     log_audit_event(
@@ -351,7 +355,10 @@ async def evaluate_document_risks_endpoint(
         target_id=doc.id,
         ip_address=request.client.host if request.client else None,
         status="SUCCESS",
-        details={"total_risks": result.summary.total_risks, "verdict": result.summary.overall_health_verdict}
+        details={
+            "total_risks": result.summary.total_risks,
+            "verdict": result.summary.overall_health_verdict,
+        },
     )
 
     return result
@@ -361,22 +368,18 @@ async def evaluate_document_risks_endpoint(
 async def evaluate_text_risks_endpoint(
     payload: RiskEvaluateTextRequest,
     current_user: User = Depends(get_current_user),
-    ai_provider: BaseAIProvider = Depends(get_ai)
+    ai_provider: BaseAIProvider = Depends(get_ai),
 ):
     """
     On-demand ad-hoc evaluation of arbitrary contract text through the NYAYA RAKSHAK Risk Engine.
     """
     return await risk_engine.analyze_document_risks(
-        document_text=payload.text,
-        document_title=payload.document_title,
-        ai_provider=ai_provider
+        document_text=payload.text, document_title=payload.document_title, ai_provider=ai_provider
     )
 
 
 @router.get("/risk-engine/rules", response_model=List[RuleVersionInfo])
-async def list_versioned_risk_rules(
-    current_user: User = Depends(get_current_user)
-):
+async def list_versioned_risk_rules(current_user: User = Depends(get_current_user)):
     """
     List all registered, versioned deterministic risk rules with audit changelogs.
     """
@@ -442,6 +445,7 @@ async def generate_action_plan(
         obligations_items = [ObligationItem(**o) for o in raw.get("obligations", [])]
         missing_items = [MissingClauseItem(**m) for m in raw.get("missing_clauses", [])]
         import json as _json
+
         analysis = AnalysisResult(
             document_id=doc.id,
             summary_citizen=raw.get("summary_citizen", ""),
@@ -492,4 +496,3 @@ async def generate_action_plan(
     )
 
     return plan
-

@@ -3,15 +3,9 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
-  AlertTriangle,
   ArrowRight,
-  CheckCircle2,
   FileCheck2,
-  FileText,
-  HelpCircle,
   Plus,
-  Scale,
-  ShieldAlert,
   Trash2,
 } from 'lucide-react';
 import VerificationBadge from '@/components/VerificationBadge';
@@ -46,7 +40,7 @@ function VerifyContent() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [selectedDocId]);
 
   const handleRunVerification = async () => {
     if (claimsList.length === 0) return;
@@ -216,7 +210,7 @@ function VerifyContent() {
                     <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
                       {item.claim_id}
                     </span>
-                    <h3 className="text-base font-bold text-white mt-1">"{item.claim_text}"</h3>
+                    <h3 className="text-base font-bold text-white mt-1">&ldquo;{item.claim_text}&rdquo;</h3>
                   </div>
 
                   <VerificationBadge
@@ -248,7 +242,7 @@ function VerifyContent() {
                 {item.evidence_snippet && (
                   <div className="bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-xs space-y-1">
                     <span className="text-amber-400 font-semibold block">Grounded Evidence Excerpt:</span>
-                    <p className="text-slate-300 font-mono italic">"{item.evidence_snippet}"</p>
+                    <p className="text-slate-300 font-mono italic">&ldquo;{item.evidence_snippet}&rdquo;</p>
                   </div>
                 )}
 

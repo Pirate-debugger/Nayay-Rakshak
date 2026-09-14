@@ -8,6 +8,7 @@ Enforces strict epistemic humility and verification gating:
 
 import re
 from typing import List, Tuple
+
 from app.schemas.verification import (
     ClaimVerificationDetail,
     VerificationStatus,
@@ -23,13 +24,11 @@ class SafetyGate:
         r"completely\s+(?:error-?free|hallucination-?free)",
         r"guaranteed\s+(?:to\s+be\s+)?legally\s+binding",
         r"infallible\s+legal\s+advice",
-        r"certified\s+legal\s+truth"
+        r"certified\s+legal\s+truth",
     ]
 
     def gate_and_finalize(
-        self,
-        draft_answer: str,
-        claims: List[ClaimVerificationDetail]
+        self, draft_answer: str, claims: List[ClaimVerificationDetail]
     ) -> Tuple[str, str, bool]:
         """
         Evaluates draft response against verified claims.
@@ -47,12 +46,11 @@ class SafetyGate:
                     pattern,
                     "evidence-grounded legal clarity (advocate consultation recommended)",
                     final_text,
-                    flags=re.IGNORECASE
+                    flags=re.IGNORECASE,
                 )
                 actions.append("REDACTED_HALLUCINATION_FREE_CLAIM")
 
         # 2. Process Unsupported and Conflicting Claims
-        hedged_paragraphs = []
         has_unsupported = False
         has_conflicting = False
 
@@ -80,16 +78,26 @@ class SafetyGate:
 
         if has_unsupported:
             actions.append("HEDGED_UNSUPPORTED_CLAIMS")
-            unsupported_notes = "\n".join([
-                f"- ⚠️ {c.hedged_text}" for c in claims if c.verification_status == VerificationStatus.UNSUPPORTED
-            ])
-            final_text += f"\n\n### ⚠️ Verification Caveats & Unverified Assertions\n{unsupported_notes}"
+            unsupported_notes = "\n".join(
+                [
+                    f"- ⚠️ {c.hedged_text}"
+                    for c in claims
+                    if c.verification_status == VerificationStatus.UNSUPPORTED
+                ]
+            )
+            final_text += (
+                f"\n\n### ⚠️ Verification Caveats & Unverified Assertions\n{unsupported_notes}"
+            )
 
         if has_conflicting:
             actions.append("CONFLICT_HIGHLIGHTED")
-            conflict_notes = "\n".join([
-                f"- ⚖️ {c.hedged_text}" for c in claims if c.verification_status == VerificationStatus.CONFLICTING
-            ])
+            conflict_notes = "\n".join(
+                [
+                    f"- ⚖️ {c.hedged_text}"
+                    for c in claims
+                    if c.verification_status == VerificationStatus.CONFLICTING
+                ]
+            )
             final_text += f"\n\n### ⚖️ Identified Legal & Document Conflicts\n{conflict_notes}"
 
         if not actions:

@@ -24,7 +24,7 @@ class TierWeightedReranker:
         keyword_results: List[RetrievalResultItem],
         semantic_results: List[RetrievalResultItem],
         top_k: int = 5,
-        rrf_k: int = 60
+        rrf_k: int = 60,
     ) -> List[RetrievalResultItem]:
         """
         Combines keyword and semantic ranking streams using RRF boosted by source tier.
@@ -36,13 +36,17 @@ class TierWeightedReranker:
         # 1. Process keyword stream
         for rank, item in enumerate(keyword_results):
             combined[item.item_id] = item
-            rrf_scores[item.item_id] = rrf_scores.get(item.item_id, 0.0) + (1.0 / (rrf_k + rank + 1))
+            rrf_scores[item.item_id] = rrf_scores.get(item.item_id, 0.0) + (
+                1.0 / (rrf_k + rank + 1)
+            )
 
         # 2. Process semantic stream
         for rank, item in enumerate(semantic_results):
             if item.item_id not in combined:
                 combined[item.item_id] = item
-            rrf_scores[item.item_id] = rrf_scores.get(item.item_id, 0.0) + (1.0 / (rrf_k + rank + 1))
+            rrf_scores[item.item_id] = rrf_scores.get(item.item_id, 0.0) + (
+                1.0 / (rrf_k + rank + 1)
+            )
 
         # 3. Apply Tier Weighting
         reranked: List[RetrievalResultItem] = []
@@ -51,10 +55,9 @@ class TierWeightedReranker:
             final_rrf = rrf_scores[item_id] * tier_weight
 
             # Update final score
-            updated_item = base_item.model_copy(update={
-                "tier_boost": tier_weight,
-                "final_score": round(final_rrf * 100, 4)
-            })
+            updated_item = base_item.model_copy(
+                update={"tier_boost": tier_weight, "final_score": round(final_rrf * 100, 4)}
+            )
             reranked.append(updated_item)
 
         # 4. Sort descending

@@ -1,6 +1,6 @@
 from typing import Any, List, Optional, Union
 
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status
 
 from app.core.audit import log_audit_event
 from app.core.roles import Action, Role, has_role_privilege, is_admin_or_operator, normalize_role
@@ -13,9 +13,8 @@ def authorize_object_access(
     action: Action = Action.READ,
     resource_type: Optional[str] = None,
     request: Optional[Any] = None,
-    db: Optional[Any] = None
+    db: Optional[Any] = None,
 ) -> None:
-
     """
     Mandatory Object-Level Authorization (Anti-BOLA/IDOR).
     Enforces strict ownership and tenant isolation on every user-owned entity.
@@ -29,7 +28,7 @@ def authorize_object_access(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required to access this resource."
+            detail="Authentication required to access this resource.",
         )
 
     # Admins and System Operators have supervisory operational access
@@ -54,12 +53,12 @@ def authorize_object_access(
                 details={
                     "attempted_action": action.value,
                     "resource_owner_id": owner_id,
-                    "requesting_user_id": user.id
-                }
+                    "requesting_user_id": user.id,
+                },
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied. You do not have permission to {action.value.lower()} this {res_name}."
+                detail=f"Access denied. You do not have permission to {action.value.lower()} this {res_name}.",
             )
         return
 
@@ -73,7 +72,7 @@ def authorize_object_access(
             if not is_member:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied. You do not belong to the organization owning this resource."
+                    detail="Access denied. You do not belong to the organization owning this resource.",
                 )
 
 
@@ -81,8 +80,7 @@ def check_user_role(user: User, allowed_roles: List[Union[str, Role]]) -> None:
     """Validate that the user has at least one of the allowed role privileges."""
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required."
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required."
         )
     norm_allowed = [normalize_role(r) for r in allowed_roles]
     user_norm = normalize_role(user.role)
@@ -91,9 +89,9 @@ def check_user_role(user: User, allowed_roles: List[Union[str, Role]]) -> None:
             action="RBAC_PRIVILEGE_VIOLATION_BLOCKED",
             user_id=user.id,
             status="DENIED",
-            details={"user_role": user_norm, "required_roles": norm_allowed}
+            details={"user_role": user_norm, "required_roles": norm_allowed},
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: You do not have the required role privileges to access this resource."
+            detail="Forbidden: You do not have the required role privileges to access this resource.",
         )

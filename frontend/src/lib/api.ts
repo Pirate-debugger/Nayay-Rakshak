@@ -3,7 +3,6 @@ import {
   AnalysisResponse,
   AuthoritativeSourceRecord,
   BriefResponse,
-  ChecklistItem,
   ClaimVerificationPipelineResponse,
   ComparisonResponse,
   DocumentChecklistResponse,

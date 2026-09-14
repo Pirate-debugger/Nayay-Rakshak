@@ -5,12 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import {
   ArrowRight,
   Download,
-  FileText,
   Printer,
   Scale,
   Shield,
-  ShieldCheck,
-  UserCheck,
 } from 'lucide-react';
 import { useLanguage } from '@/components/AppShell';
 import { createBrief, getExportBriefUrl, listDocuments } from '@/lib/api';
@@ -41,7 +38,7 @@ function BriefContent() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [selectedDocId]);
 
   const handleGenerate = async () => {
     if (!selectedDocId || !clientName.trim()) return;

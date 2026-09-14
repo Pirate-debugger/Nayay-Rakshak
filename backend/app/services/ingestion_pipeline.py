@@ -3,7 +3,7 @@ import logging
 import os
 import shutil
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -27,7 +27,6 @@ from app.db.models import (
 from app.services.document_parser import (
     chunk_document_with_provenance,
     extract_document_structure,
-    normalize_text,
 )
 from app.services.pii_sanitizer import sanitize_pii
 from app.services.prompt_guard import sanitize_user_input
@@ -45,7 +44,7 @@ async def execute_document_ingestion(
     file_bytes: bytes,
     original_filename: str,
     db: AsyncSession,
-    redact_pii: bool = True
+    redact_pii: bool = True,
 ) -> Dict[str, Any]:
     """
     17-Stage Secure Document Ingestion Pipeline.
@@ -63,7 +62,7 @@ async def execute_document_ingestion(
         document_id=doc.id,
         job_type="DEEP_ANALYSIS",
         status="RUNNING",
-        started_at=datetime.now(timezone.utc)
+        started_at=datetime.now(timezone.utc),
     )
     db.add(job)
     await db.commit()
@@ -101,14 +100,20 @@ async def execute_document_ingestion(
             Document.user_id == doc.user_id,
             Document.id != doc.id,
             Document.status == "READY",
-            Document.deleted_at.is_(None)
+            Document.deleted_at.is_(None),
         )
         dup_res = await db.execute(dup_query)
         dup_doc = dup_res.scalars().first()
 
         if dup_doc:
-            logger.info(f"Duplicate document detected (Hash: {content_hash[:8]}). Reusing verified chunks from Document {dup_doc.id}.")
-            existing_chunks_q = select(DocumentChunk).where(DocumentChunk.document_id == dup_doc.id).order_by(DocumentChunk.chunk_index)
+            logger.info(
+                f"Duplicate document detected (Hash: {content_hash[:8]}). Reusing verified chunks from Document {dup_doc.id}."
+            )
+            existing_chunks_q = (
+                select(DocumentChunk)
+                .where(DocumentChunk.document_id == dup_doc.id)
+                .order_by(DocumentChunk.chunk_index)
+            )
             existing_chunks = (await db.execute(existing_chunks_q)).scalars().all()
             cloned_chunks = [
                 DocumentChunk(
@@ -121,7 +126,7 @@ async def execute_document_ingestion(
                     content=ec.content,
                     clean_content=ec.clean_content,
                     token_count=ec.token_count,
-                    embedding=ec.embedding
+                    embedding=ec.embedding,
                 )
                 for ec in existing_chunks
             ]
@@ -150,21 +155,23 @@ async def execute_document_ingestion(
                 target_type="Document",
                 target_id=doc.id,
                 status="SUCCESS",
-                details={"reused_from_document_id": dup_doc.id, "chunks_cloned": len(existing_chunks)}
+                details={
+                    "reused_from_document_id": dup_doc.id,
+                    "chunks_cloned": len(existing_chunks),
+                },
             )
             return {
                 "status": "COMPLETED",
                 "document_id": doc.id,
                 "duplicate_reused": True,
                 "page_count": doc.page_count,
-                "chunks_count": len(existing_chunks)
+                "chunks_count": len(existing_chunks),
             }
 
         # Stage 6 & 7: METADATA & TEXT EXTRACTION
         structure = extract_document_structure(file_bytes, file_type)
         pages = structure["pages"]
         sections = structure["sections"]
-        tables = structure["tables"]
         clauses = structure["clauses"]
 
         doc.page_count = len(pages) if pages else 1
@@ -186,7 +193,7 @@ async def execute_document_ingestion(
                     raw_text=raw_p_text,
                     clean_text=clean_p_text,
                     ocr_confidence=p["ocr_confidence"],
-                    layout_data=p.get("layout_data", "[]")
+                    layout_data=p.get("layout_data", "[]"),
                 )
             )
         if new_pages:
@@ -199,7 +206,7 @@ async def execute_document_ingestion(
                 section_title=s["section_title"],
                 section_number=s.get("section_number"),
                 start_page=s.get("start_page", 1),
-                end_page=s.get("end_page", 1)
+                end_page=s.get("end_page", 1),
             )
             for s in sections
         ]
@@ -224,7 +231,7 @@ async def execute_document_ingestion(
                     raw_text=c["raw_text"],
                     clean_text=clean_clause_text,
                     risk_level=c["risk_level"],
-                    is_unfair=c.get("is_unfair", False)
+                    is_unfair=c.get("is_unfair", False),
                 )
             )
         if new_clauses:
@@ -236,7 +243,7 @@ async def execute_document_ingestion(
             pages=pages,
             sections=sections,
             content_hash=content_hash,
-            version_id=None
+            version_id=None,
         )
 
         # Stage 16 & 17: EMBEDDING & INDEXING (Batched)
@@ -261,7 +268,7 @@ async def execute_document_ingestion(
                     content=c["content"],
                     clean_content=clean_chunk_content,
                     token_count=c["token_count"],
-                    embedding=embedding_vector
+                    embedding=embedding_vector,
                 )
             )
         if new_chunks:
@@ -295,8 +302,8 @@ async def execute_document_ingestion(
                 "page_count": doc.page_count,
                 "clause_count": len(clauses),
                 "chunk_count": len(chunks),
-                "content_hash": content_hash
-            }
+                "content_hash": content_hash,
+            },
         )
 
         return {
@@ -304,7 +311,7 @@ async def execute_document_ingestion(
             "document_id": doc.id,
             "page_count": doc.page_count,
             "clauses_detected": len(clauses),
-            "chunks_indexed": len(chunks)
+            "chunks_indexed": len(chunks),
         }
 
     except Exception as e:
@@ -328,7 +335,7 @@ async def execute_document_ingestion(
             target_type="Document",
             target_id=doc.id,
             status="FAILURE",
-            details={"error": str(e)}
+            details={"error": str(e)},
         )
 
         return {"status": "FAILED", "error": str(e)}

@@ -10,6 +10,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     Production-grade HTTP Security Headers Middleware.
     Enforces strict browser sandboxing, anti-framing, HSTS, and CSP without weakening protections.
     """
+
     async def dispatch(self, request: Request, call_next) -> Response:
         response = await call_next(request)
 
@@ -38,14 +39,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
         # 5. Disable unused browser device APIs
-        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=(), payment=()"
+        )
 
         # 6. Modern XSS filter setting (0 to prevent XS-Search side channels)
         response.headers["X-XSS-Protection"] = "0"
 
         # 7. HTTP Strict Transport Security (HSTS) in production or HTTPS
         if settings.ENVIRONMENT == "production" or request.url.scheme == "https":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains; preload"
+            )
 
         # 8. Mandatory Legal Educational Disclaimer Header
         response.headers["X-Legal-Disclaimer"] = "Nyaya-Rakshak-Educational-Only-Not-Legal-Advice"

@@ -18,7 +18,7 @@ security_bearer = HTTPBearer(auto_error=False)
 
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Security(security_bearer),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     """Validate bearer token, check session revocation registry, and retrieve authenticated user."""
     if not credentials:
@@ -67,7 +67,7 @@ async def get_current_user(
 
 async def get_current_user_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Security(security_bearer),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> Optional[User]:
     """Optional user authentication for public/demo endpoints."""
     if not credentials:
@@ -86,9 +86,11 @@ async def get_current_user_optional(
 
 def require_roles(allowed_roles: List[Union[str, Role]]):
     """Dependency factory enforcing Role-Based Access Control (RBAC)."""
+
     async def _role_verifier(current_user: User = Depends(get_current_user)) -> User:
         check_user_role(current_user, allowed_roles)
         return current_user
+
     return _role_verifier
 
 

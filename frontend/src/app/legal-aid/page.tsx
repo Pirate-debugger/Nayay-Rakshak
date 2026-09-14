@@ -3,16 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   AlertCircle,
-  Building2,
   CheckCircle2,
   ExternalLink,
-  Filter,
   PhoneCall,
   Scale,
   Search,
-  ShieldAlert,
   UserCheck,
-  Users,
 } from 'lucide-react';
 import { useLanguage } from '@/components/AppShell';
 import { checkLegalAidEligibility, getLegalAidResources } from '@/lib/api';
@@ -37,23 +33,25 @@ export default function LegalAidPage() {
   const [checking, setChecking] = useState(false);
 
   useEffect(() => {
-    fetchResources();
-  }, [searchQuery, filterType]);
+    let active = true;
+    getLegalAidResources(
+      searchQuery || undefined,
+      filterType !== 'ALL' ? filterType : undefined
+    )
+      .then((res) => {
+        if (active) setResources(res);
+      })
+      .catch(() => {
+        if (active) setResources([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
 
-  const fetchResources = async () => {
-    try {
-      setLoading(true);
-      const res = await getLegalAidResources(
-        searchQuery || undefined,
-        filterType !== 'ALL' ? filterType : undefined
-      );
-      setResources(res);
-    } catch {
-      setResources([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      active = false;
+    };
+  }, [searchQuery, filterType]);
 
   const handleCheckEligibility = async (e: React.FormEvent) => {
     e.preventDefault();

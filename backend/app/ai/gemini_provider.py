@@ -11,6 +11,7 @@ from app.services.prompt_guard import encapsulate_untrusted_document
 
 logger = logging.getLogger(__name__)
 
+
 class GeminiProvider(BaseAIProvider):
     """
     Google Gemini API provider implementation.
@@ -44,19 +45,23 @@ class GeminiProvider(BaseAIProvider):
             response = await asyncio.to_thread(
                 self.model.generate_content,
                 user_prompt,
-                generation_config={"response_mime_type": "application/json"}
+                generation_config={"response_mime_type": "application/json"},
             )
             data = json.loads(response.text)
             return data
         except Exception as e:
-            logger.warning(f"Gemini API analysis failed: {e}. Falling back to deterministic offline provider.")
+            logger.warning(
+                f"Gemini API analysis failed: {e}. Falling back to deterministic offline provider."
+            )
             return await self.fallback.analyze_document(text, title)
 
     async def answer_question(self, question: str, chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
         if not self.model or not self.api_key:
             return await self.fallback.answer_question(question, chunks)
 
-        context = "\n---\n".join([f"[Page {c.get('page_number', 1)}]: {c.get('clean_content', '')}" for c in chunks[:10]])
+        context = "\n---\n".join(
+            [f"[Page {c.get('page_number', 1)}]: {c.get('clean_content', '')}" for c in chunks[:10]]
+        )
         prompt = (
             "You are Nyaya Rakshak Grounded Q&A. Answer the user question STRICTLY using the context below. "
             "If the answer cannot be found in the context, you MUST state: 'I could not verify this from the available sources.' "
@@ -70,7 +75,7 @@ class GeminiProvider(BaseAIProvider):
             response = await asyncio.to_thread(
                 self.model.generate_content,
                 prompt,
-                generation_config={"response_mime_type": "application/json"}
+                generation_config={"response_mime_type": "application/json"},
             )
             data = json.loads(response.text)
             if isinstance(data, dict) and "answer" in data:
@@ -79,7 +84,7 @@ class GeminiProvider(BaseAIProvider):
                     "answer": data.get("answer", ""),
                     "confidence_score": float(data.get("confidence_score", 0.85)),
                     "citations": data.get("citations", []),
-                    "is_found_in_document": bool(data.get("is_found_in_document", True))
+                    "is_found_in_document": bool(data.get("is_found_in_document", True)),
                 }
             return await self.fallback.answer_question(question, chunks)
         except Exception as e:
@@ -91,18 +96,14 @@ class GeminiProvider(BaseAIProvider):
         return await self.fallback.verify_claim(claim, chunks)
 
     async def compare_documents(
-        self,
-        base_title: str,
-        base_text: str,
-        target_title: str,
-        target_text: str
+        self, base_title: str, base_text: str, target_title: str, target_text: str
     ) -> Dict[str, Any]:
-        return await self.fallback.compare_documents(base_title, base_text, target_title, target_text)
+        return await self.fallback.compare_documents(
+            base_title, base_text, target_title, target_text
+        )
 
     async def interpret_clause(
-        self,
-        clause_text: str,
-        deterministic_facts: Dict[str, Any]
+        self, clause_text: str, deterministic_facts: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         AI-driven semantic interpretation of a clause.
@@ -129,13 +130,14 @@ class GeminiProvider(BaseAIProvider):
             response = await asyncio.to_thread(
                 self.model.generate_content,
                 prompt,
-                generation_config={"response_mime_type": "application/json"}
+                generation_config={"response_mime_type": "application/json"},
             )
             data = json.loads(response.text)
             if isinstance(data, dict):
                 return data
             return await self.fallback.interpret_clause(clause_text, deterministic_facts)
         except Exception as e:
-            logger.warning(f"Gemini clause interpretation failed: {e}. Falling back to deterministic rules.")
+            logger.warning(
+                f"Gemini clause interpretation failed: {e}. Falling back to deterministic rules."
+            )
             return await self.fallback.interpret_clause(clause_text, deterministic_facts)
-

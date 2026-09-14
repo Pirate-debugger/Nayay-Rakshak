@@ -1,7 +1,6 @@
-import json
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 from app.ai.factory import get_ai_provider
 from app.schemas.clause_intelligence import (
@@ -34,19 +33,21 @@ def segment_clauses_from_text(full_text: str, default_page: int = 1) -> List[Dic
     current_section = "General Terms"
 
     clause_header_pattern = re.compile(
-        r'^(?:Clause|Section|Article|\b[0-9]{1,2}\.)\s*(?P<num>[0-9]+(?:\.[0-9]+)*|[A-Z])?[:\.\s]*(?P<title>[^\n]+)?',
-        re.IGNORECASE
+        r"^(?:Clause|Section|Article|\b[0-9]{1,2}\.)\s*(?P<num>[0-9]+(?:\.[0-9]+)*|[A-Z])?[:\.\s]*(?P<title>[^\n]+)?",
+        re.IGNORECASE,
     )
 
     for p in paras:
         match = clause_header_pattern.match(p)
         if match and len(current_block) > 40:
-            candidates.append({
-                "clause_id": f"C-{clause_idx:02d}",
-                "section": current_section,
-                "text": current_block.strip(),
-                "page": default_page
-            })
+            candidates.append(
+                {
+                    "clause_id": f"C-{clause_idx:02d}",
+                    "section": current_section,
+                    "text": current_block.strip(),
+                    "page": default_page,
+                }
+            )
             clause_idx += 1
             current_block = p
             if match.group("title"):
@@ -58,12 +59,14 @@ def segment_clauses_from_text(full_text: str, default_page: int = 1) -> List[Dic
                 current_block = p
 
     if current_block.strip():
-        candidates.append({
-            "clause_id": f"C-{clause_idx:02d}",
-            "section": current_section,
-            "text": current_block.strip(),
-            "page": default_page
-        })
+        candidates.append(
+            {
+                "clause_id": f"C-{clause_idx:02d}",
+                "section": current_section,
+                "text": current_block.strip(),
+                "page": default_page,
+            }
+        )
 
     # If segmentation produced only 1 giant block, split by single newline numbers
     if len(candidates) <= 1 and len(full_text) > 400:
@@ -72,24 +75,28 @@ def segment_clauses_from_text(full_text: str, default_page: int = 1) -> List[Dic
         clause_idx = 1
         curr_lines = []
         for ln in lines:
-            if re.match(r'^[0-9]{1,2}[\.\)]\s+', ln) and curr_lines:
-                candidates.append({
-                    "clause_id": f"C-{clause_idx:02d}",
-                    "section": current_section,
-                    "text": " ".join(curr_lines),
-                    "page": default_page
-                })
+            if re.match(r"^[0-9]{1,2}[\.\)]\s+", ln) and curr_lines:
+                candidates.append(
+                    {
+                        "clause_id": f"C-{clause_idx:02d}",
+                        "section": current_section,
+                        "text": " ".join(curr_lines),
+                        "page": default_page,
+                    }
+                )
                 clause_idx += 1
                 curr_lines = [ln]
             else:
                 curr_lines.append(ln)
         if curr_lines:
-            candidates.append({
-                "clause_id": f"C-{clause_idx:02d}",
-                "section": current_section,
-                "text": " ".join(curr_lines),
-                "page": default_page
-            })
+            candidates.append(
+                {
+                    "clause_id": f"C-{clause_idx:02d}",
+                    "section": current_section,
+                    "text": " ".join(curr_lines),
+                    "page": default_page,
+                }
+            )
 
     return candidates
 
@@ -130,7 +137,9 @@ def generate_simplified_explanation(category: str, text: str, facts: Dict[str, A
     if "indemnif" in lower:
         return "This clause makes one party pay for legal costs, losses, or damages suffered by the other party."
 
-    return "This clause outlines specific rights, duties, and conditions agreed upon by the parties."
+    return (
+        "This clause outlines specific rights, duties, and conditions agreed upon by the parties."
+    )
 
 
 def extract_semantic_interpretation_rules(text: str, facts: Dict[str, Any]) -> Dict[str, Any]:
@@ -150,28 +159,49 @@ def extract_semantic_interpretation_rules(text: str, facts: Dict[str, Any]) -> D
     penalties = []
     termination_conditions = []
 
-    sentences = [s.strip() for s in re.split(r'[\.\;\n]', text) if s.strip()]
+    sentences = [s.strip() for s in re.split(r"[\.\;\n]", text) if s.strip()]
 
     for s in sentences:
         s_lower = s.lower()
         # Obligations
-        if any(w in s_lower for w in ["shall pay", "must pay", "shall provide", "shall maintain", "agrees to", "is required to"]):
+        if any(
+            w in s_lower
+            for w in [
+                "shall pay",
+                "must pay",
+                "shall provide",
+                "shall maintain",
+                "agrees to",
+                "is required to",
+            ]
+        ):
             obligations.append(s.strip())
         # Rights
-        if any(w in s_lower for w in ["may", "has the right", "is entitled to", "at its sole option"]):
+        if any(
+            w in s_lower for w in ["may", "has the right", "is entitled to", "at its sole option"]
+        ):
             rights.append(s.strip())
         # Prohibitions
-        if any(w in s_lower for w in ["shall not", "must not", "prohibited", "neither party shall", "will not"]):
+        if any(
+            w in s_lower
+            for w in ["shall not", "must not", "prohibited", "neither party shall", "will not"]
+        ):
             prohibitions.append(s.strip())
         # Conditions & Triggers
-        if any(w in s_lower for w in ["provided that", "subject to", "on condition", "in the event", "upon failure"]):
+        if any(
+            w in s_lower
+            for w in ["provided that", "subject to", "on condition", "in the event", "upon failure"]
+        ):
             conditions.append(s.strip())
             triggers.append(s.strip())
         # Deadlines
         if any(w in s_lower for w in ["within", "prior to", "before", "by the", "on or before"]):
             deadlines.append(s.strip())
         # Penalties
-        if any(w in s_lower for w in ["penalty", "forfeit", "interest of", "liquidated damages", "late charge"]):
+        if any(
+            w in s_lower
+            for w in ["penalty", "forfeit", "interest of", "liquidated damages", "late charge"]
+        ):
             penalties.append(s.strip())
         # Termination
         if any(w in s_lower for w in ["terminate", "termination", "cancel", "vacate", "eviction"]):
@@ -179,7 +209,18 @@ def extract_semantic_interpretation_rules(text: str, facts: Dict[str, Any]) -> D
 
     # Detect parties
     parties = []
-    party_keywords = ["landlord", "tenant", "employer", "employee", "service provider", "client", "lender", "borrower", "disclosing party", "receiving party"]
+    party_keywords = [
+        "landlord",
+        "tenant",
+        "employer",
+        "employee",
+        "service provider",
+        "client",
+        "lender",
+        "borrower",
+        "disclosing party",
+        "receiving party",
+    ]
     for pk in party_keywords:
         if pk in lower:
             parties.append(pk.title())
@@ -188,7 +229,7 @@ def extract_semantic_interpretation_rules(text: str, facts: Dict[str, Any]) -> D
 
     # Jurisdiction and governing law
     jurisdiction = None
-    jur_m = re.search(r'(?:courts\s+(?:of|at|in))\s+([A-Z][a-zA-Z]+)', text, re.IGNORECASE)
+    jur_m = re.search(r"(?:courts\s+(?:of|at|in))\s+([A-Z][a-zA-Z]+)", text, re.IGNORECASE)
     if jur_m:
         jurisdiction = f"Courts at {jur_m.group(1).strip()}"
 
@@ -196,15 +237,20 @@ def extract_semantic_interpretation_rules(text: str, facts: Dict[str, Any]) -> D
     if "laws of india" in lower or "law of india" in lower:
         governing_law = "Laws of India"
     else:
-        gov_m = re.search(r'(?:governed\s+by\s+(?:the\s+)?laws\s+of)\s+([A-Z][a-zA-Z]+)', text, re.IGNORECASE)
+        gov_m = re.search(
+            r"(?:governed\s+by\s+(?:the\s+)?laws\s+of)\s+([A-Z][a-zA-Z]+)", text, re.IGNORECASE
+        )
         if gov_m:
             governing_law = f"Laws of {gov_m.group(1).strip()}"
-
 
     # Arbitration
     arbitration = None
     if "arbitration" in lower:
-        arbitration = "Arbitration and Conciliation Act, 1996" if "1996" in lower or "india" in lower else "Binding Arbitration Clause"
+        arbitration = (
+            "Arbitration and Conciliation Act, 1996"
+            if "1996" in lower or "india" in lower
+            else "Binding Arbitration Clause"
+        )
 
     # Confidentiality
     confidentiality = None
@@ -223,7 +269,10 @@ def extract_semantic_interpretation_rules(text: str, facts: Dict[str, Any]) -> D
 
     # IP
     ip = None
-    if any(k in lower for k in ["intellectual property", "inventions", "copyright", "patent", "work for hire"]):
+    if any(
+        k in lower
+        for k in ["intellectual property", "inventions", "copyright", "patent", "work for hire"]
+    ):
         ip = "Intellectual property ownership and assignment terms."
 
     # Renewal
@@ -261,67 +310,12 @@ def extract_semantic_interpretation_rules(text: str, facts: Dict[str, Any]) -> D
         "intellectual_property": ip,
         "renewal": renewal,
         "dispute_resolution": dispute_res,
-        "privacy_data_terms": privacy
+        "privacy_data_terms": privacy,
     }
 
 
-def analyze_clause_structured(
-    clause_id: str,
-    raw_text: str,
-    page_number: int = 1,
-    section_name: str = "General Covenants",
-    char_offset: int = 0
-) -> StructuredClauseRecord:
-    """
-    Extract deterministic facts, evaluate taxonomy risk rules,
-    synthesize semantic interpretation, and guarantee deterministic integrity.
-    """
-    # 1. Deterministic extraction (immutability guaranteed)
-    raw_facts = extract_deterministic_facts(raw_text)
-
-    det_currencies = [
-        DeterministicCurrency(currency=c["currency"], amount=c["amount"], raw_text=c["raw_text"])
-        for c in raw_facts["currencies"]
-    ]
-    det_percentages = [
-        DeterministicPercentage(value=p["value"], frequency=p["frequency"], raw_text=p["raw_text"])
-        for p in raw_facts["percentages"]
-    ]
-    det_durations = [
-        DeterministicDuration(count=d["count"], unit=d["unit"], days_equivalent=d["days_equivalent"], raw_text=d["raw_text"])
-        for d in raw_facts["durations"]
-    ]
-    det_dates = [
-        DeterministicDate(date_string=dt["date_string"], format=dt["format"], raw_text=dt["raw_text"])
-        for dt in raw_facts["dates"]
-    ]
-    det_sections = [
-        DeterministicSection(prefix=s["prefix"], number=s["number"], full_reference=s["full_reference"])
-        for s in raw_facts["sections"]
-    ]
-
-    deterministic_facts_model = DeterministicFacts(
-        currencies=det_currencies,
-        percentages=det_percentages,
-        durations=det_durations,
-        dates=det_dates,
-        sections=det_sections
-    )
-
-    # 2. Taxonomy classification & evaluation
-    cat_id, cat_name = taxonomy_registry.classify_clause(raw_text)
-    plugin = taxonomy_registry.get(cat_id)
-
-    risk_level = "LOW"
-    is_unfair = False
-    statutory_ref = None
-
-    if plugin:
-        risk_level, is_unfair, statutory_ref, _ = plugin.evaluate_covenant_risk(raw_text, raw_facts)
-
 def enforce_deterministic_immutability(
-    raw_facts: Dict[str, Any],
-    semantic_data: Dict[str, Any]
+    raw_facts: Dict[str, Any], semantic_data: Dict[str, Any]
 ) -> ClauseSemanticInterpretation:
     """
     Guarantees that deterministic extractions (monetary values, dates, percentages, durations, sections)
@@ -342,7 +336,9 @@ def enforce_deterministic_immutability(
     det_durations = raw_facts.get("durations", [])
     det_dates = raw_facts.get("dates", [])
     if det_durations or det_dates:
-        det_deadlines = [f"{d['count']} {d['unit']}" for d in det_durations] + [dt["date_string"] for dt in det_dates]
+        det_deadlines = [f"{d['count']} {d['unit']}" for d in det_durations] + [
+            dt["date_string"] for dt in det_dates
+        ]
         existing_deadlines = semantic_data.get("deadlines") or []
         combined_deadlines = list(existing_deadlines)
         for d in det_deadlines:
@@ -363,19 +359,48 @@ def enforce_deterministic_immutability(
 
     # 4. Filter to exact ClauseSemanticInterpretation keys
     valid_keys = {
-        "parties_affected", "obligations", "rights", "prohibitions", "conditions",
-        "triggers", "deadlines", "monetary_values", "penalties", "termination_conditions",
-        "jurisdiction", "governing_law", "arbitration", "confidentiality", "indemnity",
-        "liability", "intellectual_property", "renewal", "dispute_resolution", "privacy_data_terms"
+        "parties_affected",
+        "obligations",
+        "rights",
+        "prohibitions",
+        "conditions",
+        "triggers",
+        "deadlines",
+        "monetary_values",
+        "penalties",
+        "termination_conditions",
+        "jurisdiction",
+        "governing_law",
+        "arbitration",
+        "confidentiality",
+        "indemnity",
+        "liability",
+        "intellectual_property",
+        "renewal",
+        "dispute_resolution",
+        "privacy_data_terms",
     }
     clean_kwargs = {}
     for k in valid_keys:
         val = semantic_data.get(k)
         if val is None:
-            clean_kwargs[k] = [] if k in [
-                "parties_affected", "obligations", "rights", "prohibitions", "conditions",
-                "triggers", "deadlines", "monetary_values", "penalties", "termination_conditions"
-            ] else None
+            clean_kwargs[k] = (
+                []
+                if k
+                in [
+                    "parties_affected",
+                    "obligations",
+                    "rights",
+                    "prohibitions",
+                    "conditions",
+                    "triggers",
+                    "deadlines",
+                    "monetary_values",
+                    "penalties",
+                    "termination_conditions",
+                ]
+                else None
+            )
         else:
             clean_kwargs[k] = val
 
@@ -387,7 +412,7 @@ def analyze_clause_structured(
     raw_text: str,
     page_number: int = 1,
     section_name: str = "General Covenants",
-    char_offset: int = 0
+    char_offset: int = 0,
 ) -> StructuredClauseRecord:
     """
     Extract deterministic facts, evaluate taxonomy risk rules,
@@ -405,15 +430,24 @@ def analyze_clause_structured(
         for p in raw_facts["percentages"]
     ]
     det_durations = [
-        DeterministicDuration(count=d["count"], unit=d["unit"], days_equivalent=d["days_equivalent"], raw_text=d["raw_text"])
+        DeterministicDuration(
+            count=d["count"],
+            unit=d["unit"],
+            days_equivalent=d["days_equivalent"],
+            raw_text=d["raw_text"],
+        )
         for d in raw_facts["durations"]
     ]
     det_dates = [
-        DeterministicDate(date_string=dt["date_string"], format=dt["format"], raw_text=dt["raw_text"])
+        DeterministicDate(
+            date_string=dt["date_string"], format=dt["format"], raw_text=dt["raw_text"]
+        )
         for dt in raw_facts["dates"]
     ]
     det_sections = [
-        DeterministicSection(prefix=s["prefix"], number=s["number"], full_reference=s["full_reference"])
+        DeterministicSection(
+            prefix=s["prefix"], number=s["number"], full_reference=s["full_reference"]
+        )
         for s in raw_facts["sections"]
     ]
 
@@ -422,7 +456,7 @@ def analyze_clause_structured(
         percentages=det_percentages,
         durations=det_durations,
         dates=det_dates,
-        sections=det_sections
+        sections=det_sections,
     )
 
     # 2. Taxonomy classification & evaluation
@@ -448,7 +482,7 @@ def analyze_clause_structured(
         page_number=page_number,
         char_start=char_offset,
         char_end=char_offset + len(raw_text),
-        quote_snippet=raw_text[:150] + ("..." if len(raw_text) > 150 else "")
+        quote_snippet=raw_text[:150] + ("..." if len(raw_text) > 150 else ""),
     )
 
     title = f"{cat_name.split('&')[0].strip()} Covenant"
@@ -471,7 +505,7 @@ def analyze_clause_structured(
         interpretation_confidence=0.95,
         is_unfair=is_unfair,
         risk_level=risk_level,
-        statutory_cross_reference=statutory_ref
+        statutory_cross_reference=statutory_ref,
     )
 
 
@@ -480,7 +514,7 @@ async def analyze_clause_structured_async(
     raw_text: str,
     page_number: int = 1,
     section_name: str = "General Covenants",
-    char_offset: int = 0
+    char_offset: int = 0,
 ) -> StructuredClauseRecord:
     """
     Asynchronous Clause Intelligence analysis.
@@ -497,15 +531,24 @@ async def analyze_clause_structured_async(
         for p in raw_facts["percentages"]
     ]
     det_durations = [
-        DeterministicDuration(count=d["count"], unit=d["unit"], days_equivalent=d["days_equivalent"], raw_text=d["raw_text"])
+        DeterministicDuration(
+            count=d["count"],
+            unit=d["unit"],
+            days_equivalent=d["days_equivalent"],
+            raw_text=d["raw_text"],
+        )
         for d in raw_facts["durations"]
     ]
     det_dates = [
-        DeterministicDate(date_string=dt["date_string"], format=dt["format"], raw_text=dt["raw_text"])
+        DeterministicDate(
+            date_string=dt["date_string"], format=dt["format"], raw_text=dt["raw_text"]
+        )
         for dt in raw_facts["dates"]
     ]
     det_sections = [
-        DeterministicSection(prefix=s["prefix"], number=s["number"], full_reference=s["full_reference"])
+        DeterministicSection(
+            prefix=s["prefix"], number=s["number"], full_reference=s["full_reference"]
+        )
         for s in raw_facts["sections"]
     ]
 
@@ -514,7 +557,7 @@ async def analyze_clause_structured_async(
         percentages=det_percentages,
         durations=det_durations,
         dates=det_dates,
-        sections=det_sections
+        sections=det_sections,
     )
 
     cat_id, cat_name = taxonomy_registry.classify_clause(raw_text)
@@ -544,7 +587,7 @@ async def analyze_clause_structured_async(
         page_number=page_number,
         char_start=char_offset,
         char_end=char_offset + len(raw_text),
-        quote_snippet=raw_text[:150] + ("..." if len(raw_text) > 150 else "")
+        quote_snippet=raw_text[:150] + ("..." if len(raw_text) > 150 else ""),
     )
 
     title = f"{cat_name.split('&')[0].strip()} Covenant"
@@ -567,7 +610,7 @@ async def analyze_clause_structured_async(
         interpretation_confidence=0.96,
         is_unfair=is_unfair,
         risk_level=risk_level,
-        statutory_cross_reference=statutory_ref
+        statutory_cross_reference=statutory_ref,
     )
 
 
@@ -586,7 +629,7 @@ def process_document_clauses(full_text: str, default_page: int = 1) -> List[Stru
             raw_text=c["text"],
             page_number=c.get("page", default_page),
             section_name=c.get("section", "General Covenants"),
-            char_offset=char_cursor
+            char_offset=char_cursor,
         )
         records.append(rec)
         char_cursor += len(c["text"]) + 2
@@ -594,7 +637,9 @@ def process_document_clauses(full_text: str, default_page: int = 1) -> List[Stru
     return records
 
 
-async def process_document_clauses_async(full_text: str, default_page: int = 1) -> List[StructuredClauseRecord]:
+async def process_document_clauses_async(
+    full_text: str, default_page: int = 1
+) -> List[StructuredClauseRecord]:
     """
     End-to-end Clause Intelligence processing for a complete document text (asynchronous with AI).
     Returns list of validated StructuredClauseRecords.
@@ -609,10 +654,9 @@ async def process_document_clauses_async(full_text: str, default_page: int = 1) 
             raw_text=c["text"],
             page_number=c.get("page", default_page),
             section_name=c.get("section", "General Covenants"),
-            char_offset=char_cursor
+            char_offset=char_cursor,
         )
         records.append(rec)
         char_cursor += len(c["text"]) + 2
 
     return records
-

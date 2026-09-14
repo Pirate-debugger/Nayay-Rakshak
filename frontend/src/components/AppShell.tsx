@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BookOpen, ExternalLink, Heart, Scale, Shield } from 'lucide-react';
+import { ExternalLink, Heart, Scale } from 'lucide-react';
 import Navbar from './Navbar';
 import LegalDisclaimer from './LegalDisclaimer';
 import SkipLink from './SkipLink';
@@ -31,13 +31,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [simpleMode, setSimpleModeState] = useState<boolean>(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('nyaya_lang') as Language;
-    if (saved === 'en' || saved === 'hi') {
-      setLangState(saved);
-    }
-    const savedMode = localStorage.getItem('nyaya_simple_mode');
-    if (savedMode !== null) {
-      setSimpleModeState(savedMode === 'true');
+    try {
+      const saved = localStorage.getItem('nyaya_lang') as Language;
+      const savedMode = localStorage.getItem('nyaya_simple_mode');
+      if (saved === 'en' || saved === 'hi' || savedMode !== null) {
+        queueMicrotask(() => {
+          if (saved === 'en' || saved === 'hi') {
+            setLangState(saved);
+          }
+          if (savedMode !== null) {
+            setSimpleModeState(savedMode === 'true');
+          }
+        });
+      }
+    } catch {
+      // ignore storage access errors
     }
   }, []);
 

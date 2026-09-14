@@ -1,4 +1,3 @@
-from typing import Optional
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -6,10 +5,10 @@ from sqlalchemy.future import select
 from app.api.deps import get_current_user
 from app.core.audit import log_audit_event
 from app.core.authorization import authorize_object_access
-from app.core.exceptions import ObjectNotFoundError
-from app.core.roles import Action
 from app.core.config import settings
+from app.core.exceptions import ObjectNotFoundError
 from app.core.rate_limit import limiter
+from app.core.roles import Action
 from app.db.base import get_db
 from app.db.models import Document, DocumentChunk, User
 from app.schemas.qa import QARequest, QAResponse
@@ -25,7 +24,7 @@ async def question_answering_endpoint(
     req: QARequest,
     request: Request,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Enterprise Legal Q&A Engine:
@@ -48,15 +47,13 @@ async def question_answering_endpoint(
         if not doc:
             raise ObjectNotFoundError("Document")
 
-        authorize_object_access(
-            user=current_user,
-            resource=doc,
-            action=Action.READ
-        )
+        authorize_object_access(user=current_user, resource=doc, action=Action.READ)
         target_doc_id = doc.id
 
         chunks_res = await db.execute(
-            select(DocumentChunk).where(DocumentChunk.document_id == doc.id).order_by(DocumentChunk.chunk_index)
+            select(DocumentChunk)
+            .where(DocumentChunk.document_id == doc.id)
+            .order_by(DocumentChunk.chunk_index)
         )
         chunks = chunks_res.scalars().all()
         chunk_dicts = [
@@ -65,21 +62,24 @@ async def question_answering_endpoint(
                 "page_number": c.page_number,
                 "content": c.content,
                 "clean_content": c.clean_content or c.content,
-                "section_heading": f"Page {c.page_number} Section"
+                "section_heading": f"Page {c.page_number} Section",
             }
             for c in chunks
         ]
 
     # 3. Cache lookup with strict provenance & legal source version invalidation
     from app.services.ai_cache import ai_cache_service
-    doc_hash = doc.content_hash if req.document_id is not None and 'doc' in locals() and doc else None
+
+    doc_hash = (
+        doc.content_hash if req.document_id is not None and "doc" in locals() and doc else None
+    )
     cache_key = ai_cache_service.compute_cache_key(
         document_content_hash=doc_hash,
         question=f"{req.question}:{req.language}:{req.jurisdiction or ''}",
         model_name="qa-grounded-v1",
         prompt_version="v1.0",
         pii_redacted=True,
-        user_id=current_user.id if current_user else None
+        user_id=current_user.id if current_user else None,
     )
     cached_data = await ai_cache_service.get(cache_key, db=db)
     if cached_data:
@@ -87,8 +87,7 @@ async def question_answering_endpoint(
 
     # 4. Execute Legal Q&A Pipeline
     response: QAResponse = await qa_engine.answer_legal_question(
-        req=req,
-        document_chunks=chunk_dicts
+        req=req, document_chunks=chunk_dicts
     )
 
     # Persist to cache
@@ -98,7 +97,7 @@ async def question_answering_endpoint(
         document_content_hash=doc_hash,
         model_name="qa-grounded-v1",
         prompt_version="v1.0",
-        db=db
+        db=db,
     )
 
     log_audit_event(
@@ -111,8 +110,8 @@ async def question_answering_endpoint(
         details={
             "requirement_type": response.requirement_type.value,
             "is_found_in_document": response.is_found_in_document,
-            "language": response.language
-        }
+            "language": response.language,
+        },
     )
 
     return response

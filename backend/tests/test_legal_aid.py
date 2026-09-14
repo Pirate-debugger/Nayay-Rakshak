@@ -17,11 +17,7 @@ async def test_legal_aid_resources_and_eligibility(client):
     # 1. Woman applicant (statutory entitlement regardless of income)
     elig_res_woman = await client.post(
         "/api/v1/legal-aid/check-eligibility",
-        json={
-            "annual_income": 1200000.0,
-            "state": "Delhi",
-            "is_woman_or_child": True
-        }
+        json={"annual_income": 1200000.0, "state": "Delhi", "is_woman_or_child": True},
     )
     assert elig_res_woman.status_code == 200
     w_data = elig_res_woman.json()
@@ -31,11 +27,7 @@ async def test_legal_aid_resources_and_eligibility(client):
     # 2. Low income applicant below threshold
     elig_res_income = await client.post(
         "/api/v1/legal-aid/check-eligibility",
-        json={
-            "annual_income": 180000.0,
-            "state": "Delhi",
-            "is_woman_or_child": False
-        }
+        json={"annual_income": 180000.0, "state": "Delhi", "is_woman_or_child": False},
     )
     assert elig_res_income.status_code == 200
     inc_data = elig_res_income.json()
@@ -45,15 +37,12 @@ async def test_legal_aid_resources_and_eligibility(client):
     # 3. High income non-qualifying applicant
     elig_res_high = await client.post(
         "/api/v1/legal-aid/check-eligibility",
-        json={
-            "annual_income": 1500000.0,
-            "state": "Delhi",
-            "is_woman_or_child": False
-        }
+        json={"annual_income": 1500000.0, "state": "Delhi", "is_woman_or_child": False},
     )
     assert elig_res_high.status_code == 200
     high_data = elig_res_high.json()
     assert high_data["is_eligible_for_free_legal_aid"] is False
+
 
 @pytest.mark.asyncio
 async def test_glossary_search(client):

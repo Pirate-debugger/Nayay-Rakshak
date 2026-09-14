@@ -1,10 +1,11 @@
 import pytest
+
 from app.schemas.comparison import (
     ComparisonCategory,
     DifferenceDimension,
     MaterialityLevel,
 )
-from app.services.comparison.engine import SemanticComparisonEngine, compare_legal_documents
+from app.services.comparison.engine import SemanticComparisonEngine
 
 
 @pytest.fixture
@@ -28,7 +29,7 @@ def test_identical_contracts(comp_engine):
         base_text=contract_text,
         target_document_id=102,
         target_title="Exact Duplicate Lease",
-        target_text=contract_text
+        target_text=contract_text,
     )
 
     assert res.summary.net_risk_verdict == "IDENTICAL"
@@ -59,7 +60,7 @@ def test_reordered_clauses(comp_engine):
         base_text=doc_a,
         target_document_id=102,
         target_title="Doc B (Reordered)",
-        target_text=doc_b
+        target_text=doc_b,
     )
 
     assert res.structural_diff.aligned_clause_count == 3
@@ -87,7 +88,7 @@ def test_wording_changes_without_semantic_shift(comp_engine):
         base_text=doc_a,
         target_document_id=102,
         target_title="Draft B (Stylistic Variations)",
-        target_text=doc_b
+        target_text=doc_b,
     )
 
     # Must classify as SIMILAR (cosmetic variation) and NOT trigger high-risk warnings
@@ -115,14 +116,18 @@ def test_numeric_changes(comp_engine):
         base_text=doc_a,
         target_document_id=102,
         target_title="Doc B (Increased Price & Rate)",
-        target_text=doc_b
+        target_text=doc_b,
     )
 
     fin_findings = [f for f in res.findings if f.dimension == DifferenceDimension.FINANCIAL]
     assert len(fin_findings) >= 2
     assert all(f.category == ComparisonCategory.MODIFIED for f in fin_findings)
     # Interest rate spike to 18% is CRITICAL materiality
-    interest_finding = next(f for f in fin_findings if "18" in f.difference_explanation or "interest" in f.difference_explanation.lower())
+    interest_finding = next(
+        f
+        for f in fin_findings
+        if "18" in f.difference_explanation or "interest" in f.difference_explanation.lower()
+    )
     assert interest_finding.materiality == MaterialityLevel.CRITICAL
     assert interest_finding.document_a_evidence is not None
     assert interest_finding.document_b_evidence is not None
@@ -147,7 +152,7 @@ def test_deadline_changes(comp_engine):
         base_text=doc_a,
         target_document_id=102,
         target_title="Doc B (Short Notice & Delayed Refund)",
-        target_text=doc_b
+        target_text=doc_b,
     )
 
     deadline_findings = [f for f in res.findings if f.dimension == DifferenceDimension.DEADLINE]
@@ -176,12 +181,16 @@ def test_negation_and_rights_changes(comp_engine):
         base_text=doc_a,
         target_document_id=102,
         target_title="Doc B (Negation & Restrictions)",
-        target_text=doc_b
+        target_text=doc_b,
     )
 
     conflicting = [f for f in res.findings if f.category == ComparisonCategory.CONFLICTING]
     assert len(conflicting) >= 1
-    assert any("terminate" in f.difference_explanation.lower() or "shall not" in f.difference_explanation.lower() for f in conflicting)
+    assert any(
+        "terminate" in f.difference_explanation.lower()
+        or "shall not" in f.difference_explanation.lower()
+        for f in conflicting
+    )
     assert all(f.materiality == MaterialityLevel.CRITICAL for f in conflicting)
     assert res.summary.net_risk_verdict == "TARGET_MORE_HARSH"
 
@@ -202,14 +211,17 @@ def test_liability_changes(comp_engine):
         base_text=doc_a,
         target_document_id=102,
         target_title="Doc B (Uncapped & Indemnity)",
-        target_text=doc_b
+        target_text=doc_b,
     )
 
     liab_findings = [f for f in res.findings if f.dimension == DifferenceDimension.LIABILITY]
     assert len(liab_findings) >= 1
     assert liab_findings[0].category == ComparisonCategory.MODIFIED
     assert liab_findings[0].materiality == MaterialityLevel.CRITICAL
-    assert "unlimited" in liab_findings[0].difference_explanation.lower() or "indemnif" in liab_findings[0].difference_explanation.lower()
+    assert (
+        "unlimited" in liab_findings[0].difference_explanation.lower()
+        or "indemnif" in liab_findings[0].difference_explanation.lower()
+    )
 
 
 def test_completely_different_documents(comp_engine):
@@ -234,7 +246,7 @@ def test_completely_different_documents(comp_engine):
         base_text=lease_text,
         target_document_id=202,
         target_title="Tech Employment Agreement",
-        target_text=employment_text
+        target_text=employment_text,
     )
 
     assert res.summary.net_risk_verdict == "COMPLETELY_DIFFERENT_DOCUMENTS"
@@ -265,11 +277,14 @@ def test_ocr_noise_robustness(comp_engine):
         base_text=clean_text,
         target_document_id=302,
         target_title="Scanned OCR Text with Typographic Noise",
-        target_text=ocr_corrupted_text
+        target_text=ocr_corrupted_text,
     )
 
     assert res.structural_diff.aligned_clause_count == 3
     assert res.summary.net_risk_verdict in ["IDENTICAL", "BALANCED"]
     assert res.summary.target_high_risks == 0
     # None of the clauses should be falsely flagged as MODIFIED with penalties
-    assert all(f.category in [ComparisonCategory.IDENTICAL, ComparisonCategory.SIMILAR] for f in res.findings)
+    assert all(
+        f.category in [ComparisonCategory.IDENTICAL, ComparisonCategory.SIMILAR]
+        for f in res.findings
+    )

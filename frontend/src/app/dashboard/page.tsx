@@ -4,9 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowRight,
   FileCheck2,
-  FileDiff,
   FileText,
   HelpCircle,
   Plus,
@@ -28,21 +26,21 @@ export default function DashboardPage() {
   const [showUploader, setShowUploader] = useState(false);
   const [sampleLoading, setSampleLoading] = useState(false);
 
-  const fetchDocs = async () => {
-    try {
-      setLoading(true);
-      const docs = await listDocuments();
-      setDocuments(docs);
-    } catch {
-      // If unauthorized or error, empty list is fine for demo
-      setDocuments([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchDocs();
+    let active = true;
+    listDocuments()
+      .then((docs) => {
+        if (active) setDocuments(docs);
+      })
+      .catch(() => {
+        if (active) setDocuments([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleDelete = async (id: number) => {

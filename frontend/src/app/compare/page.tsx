@@ -13,7 +13,6 @@ import {
   ShieldAlert,
   SlidersHorizontal,
   Target,
-  XCircle,
 } from 'lucide-react';
 import { useLanguage } from '@/components/AppShell';
 import { compareDocuments, listDocuments, loadSampleDocument } from '@/lib/api';

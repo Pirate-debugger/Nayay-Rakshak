@@ -12,6 +12,7 @@ class StatuteProvision(BaseModel):
     key_principles: List[str]
     citizen_advice: str
 
+
 INDIAN_STATUTORY_REGISTRY: List[StatuteProvision] = [
     # Criminal Law Transitions: BNS 2023 vs IPC
     StatuteProvision(
@@ -23,9 +24,9 @@ INDIAN_STATUTORY_REGISTRY: List[StatuteProvision] = [
         key_principles=[
             "Deceiving any person fraudulently or dishonestly",
             "Inducing delivery of property or consent to retain property",
-            "Punishable with imprisonment up to 7 years and fine"
+            "Punishable with imprisonment up to 7 years and fine",
         ],
-        citizen_advice="If someone deceived you into transferring money or property with fraudulent intent, file a police complaint referencing BNS Section 318."
+        citizen_advice="If someone deceived you into transferring money or property with fraudulent intent, file a police complaint referencing BNS Section 318.",
     ),
     StatuteProvision(
         statute="Bharatiya Nyaya Sanhita, 2023 (BNS)",
@@ -35,9 +36,9 @@ INDIAN_STATUTORY_REGISTRY: List[StatuteProvision] = [
         historical_reference="Formerly Section 378 & 379 of IPC",
         key_principles=[
             "Moving property in order to take it dishonestly",
-            "Lack of consent of possessor"
+            "Lack of consent of possessor",
         ],
-        citizen_advice="Report theft immediately at the nearest police station or file an e-FIR."
+        citizen_advice="Report theft immediately at the nearest police station or file an e-FIR.",
     ),
     StatuteProvision(
         statute="Bharatiya Nyaya Sanhita, 2023 (BNS)",
@@ -47,11 +48,10 @@ INDIAN_STATUTORY_REGISTRY: List[StatuteProvision] = [
         historical_reference="Formerly Section 499 & 500 of IPC",
         key_principles=[
             "Harming reputation of person",
-            "Includes community service as alternative penalty"
+            "Includes community service as alternative penalty",
         ],
-        citizen_advice="Truth for public good and opinions expressed in good faith regarding public servants or conduct are statutory exceptions."
+        citizen_advice="Truth for public good and opinions expressed in good faith regarding public servants or conduct are statutory exceptions.",
     ),
-
     # Criminal Procedure: BNSS 2023 vs CrPC
     StatuteProvision(
         statute="Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS)",
@@ -62,9 +62,9 @@ INDIAN_STATUTORY_REGISTRY: List[StatuteProvision] = [
         key_principles=[
             "Zero FIR can be filed at ANY police station in India",
             "Mandatory electronic or physical registration of cognizable complaints",
-            "Free copy of FIR must be given to complainant immediately"
+            "Free copy of FIR must be given to complainant immediately",
         ],
-        citizen_advice="No police officer can refuse to register an FIR on grounds of territorial jurisdiction. Insist on a Zero FIR."
+        citizen_advice="No police officer can refuse to register an FIR on grounds of territorial jurisdiction. Insist on a Zero FIR.",
     ),
     StatuteProvision(
         statute="Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS)",
@@ -75,11 +75,10 @@ INDIAN_STATUTORY_REGISTRY: List[StatuteProvision] = [
         key_principles=[
             "Right to inform a relative or friend immediately upon arrest",
             "Right to meet an advocate of choice during interrogation",
-            "Display of arrested persons at district police control rooms"
+            "Display of arrested persons at district police control rooms",
         ],
-        citizen_advice="If arrested or detained, demand immediate notification to family and access to a legal counsel or legal aid advocate."
+        citizen_advice="If arrested or detained, demand immediate notification to family and access to a legal counsel or legal aid advocate.",
     ),
-
     # Consumer Protection Act, 2019
     StatuteProvision(
         statute="Consumer Protection Act, 2019",
@@ -92,9 +91,9 @@ INDIAN_STATUTORY_REGISTRY: List[StatuteProvision] = [
             "Imposing disproportionate penalty on consumer for breach compared to seller",
             "Refusing to accept early repayment of debts",
             "Entitling unilateral termination without reasonable cause",
-            "Permitting unilateral variation of contract without consent"
+            "Permitting unilateral variation of contract without consent",
         ],
-        citizen_advice="Clauses like 'no refund under any condition' or 18% late fees on consumers when the company delays without penalty are illegal and voidable."
+        citizen_advice="Clauses like 'no refund under any condition' or 18% late fees on consumers when the company delays without penalty are illegal and voidable.",
     ),
     StatuteProvision(
         statute="Consumer Protection Act, 2019",
@@ -106,11 +105,10 @@ INDIAN_STATUTORY_REGISTRY: List[StatuteProvision] = [
             "District Commission jurisdiction up to INR 50 Lakhs",
             "Consumer can file where they currently reside (no need to travel to seller's city)",
             "Online complaint submission via e-Daakhil (edaakhil.nic.in)",
-            "Limitation period of 2 years from date on which cause of action arose"
+            "Limitation period of 2 years from date on which cause of action arose",
         ],
-        citizen_advice="You can file a formal consumer grievance online without hiring an expensive lawyer via edaakhil.nic.in."
+        citizen_advice="You can file a formal consumer grievance online without hiring an expensive lawyer via edaakhil.nic.in.",
     ),
-
     # Tenancy & Rental Laws: Model Tenancy Act & State Rent Laws
     StatuteProvision(
         statute="Model Tenancy Act (Principles applicable in Delhi, UP, Karnataka, etc.)",
@@ -123,11 +121,10 @@ INDIAN_STATUTORY_REGISTRY: List[StatuteProvision] = [
             "Refund of security deposit within specified timeline after vacant possession",
             "Mandatory 24 hours prior written notice before landlord entry for inspection",
             "Inspection strictly during daylight hours (7:00 AM to 8:00 PM)",
-            "Prohibition of cutting off essential services (water, electricity) by landlord"
+            "Prohibition of cutting off essential services (water, electricity) by landlord",
         ],
-        citizen_advice="Landlords cannot demand 6 to 10 months security deposit or barge into your rental home without 24 hours notice."
+        citizen_advice="Landlords cannot demand 6 to 10 months security deposit or barge into your rental home without 24 hours notice.",
     ),
-
     # Employment & Contract Law
     StatuteProvision(
         statute="Indian Contract Act, 1872",
@@ -138,11 +135,10 @@ INDIAN_STATUTORY_REGISTRY: List[StatuteProvision] = [
         key_principles=[
             "Post-employment non-compete clauses are completely void under Indian law",
             "Employers cannot stop an employee from joining a competitor after resignation",
-            "Only reasonable non-compete covenants DURING active employment or sale of goodwill are enforceable"
+            "Only reasonable non-compete covenants DURING active employment or sale of goodwill are enforceable",
         ],
-        citizen_advice="If an IT or corporate company threatens you with a '1-year post-exit non-compete', remember Indian courts consistently hold this void under Section 27."
+        citizen_advice="If an IT or corporate company threatens you with a '1-year post-exit non-compete', remember Indian courts consistently hold this void under Section 27.",
     ),
-
     # Data Protection: DPDP Act 2023
     StatuteProvision(
         statute="Digital Personal Data Protection Act, 2023 (DPDP Act)",
@@ -153,11 +149,10 @@ INDIAN_STATUTORY_REGISTRY: List[StatuteProvision] = [
         key_principles=[
             "Data Fiduciaries must give clear notice in plain language",
             "Consent must be free, specific, informed, unconditional and unambiguous",
-            "Users have right to access, correct, erase their data and nominate a representative"
+            "Users have right to access, correct, erase their data and nominate a representative",
         ],
-        citizen_advice="Entities cannot withhold essential services for refusing non-essential data permissions."
+        citizen_advice="Entities cannot withhold essential services for refusing non-essential data permissions.",
     ),
-
     # Legal Services Authorities Act, 1987 (Free Legal Aid)
     StatuteProvision(
         statute="Legal Services Authorities Act, 1987",
@@ -172,11 +167,12 @@ INDIAN_STATUTORY_REGISTRY: List[StatuteProvision] = [
             "Victims of human trafficking, beggar, or disaster/communal violence",
             "Industrial workmen",
             "Persons in custody or protective homes",
-            "General citizens whose annual income does not exceed the state threshold (typically INR 3,00,000 in Delhi/Karnataka/Maharashtra)"
+            "General citizens whose annual income does not exceed the state threshold (typically INR 3,00,000 in Delhi/Karnataka/Maharashtra)",
         ],
-        citizen_advice="If you qualify under Section 12, you are legally entitled to a free government advocate through DLSA/SLSA. Call national helpline 15100."
-    )
+        citizen_advice="If you qualify under Section 12, you are legally entitled to a free government advocate through DLSA/SLSA. Call national helpline 15100.",
+    ),
 ]
+
 
 def search_statutory_kb(query: str) -> List[StatuteProvision]:
     """Search statutory knowledge base for matching provisions."""
@@ -185,11 +181,20 @@ def search_statutory_kb(query: str) -> List[StatuteProvision]:
     for item in INDIAN_STATUTORY_REGISTRY:
         section_lower = item.section.lower()
         title_lower = item.title.lower()
-        statute_short = "bns" if "bharatiya nyaya" in item.statute.lower() else ("bnss" if "nagarik" in item.statute.lower() else "")
+        statute_short = (
+            "bns"
+            if "bharatiya nyaya" in item.statute.lower()
+            else ("bnss" if "nagarik" in item.statute.lower() else "")
+        )
 
-        if (section_lower in query_lower or
-            title_lower in query_lower or
-            (statute_short and statute_short in query_lower) or
-            (item.historical_reference and any(term in query_lower for term in ["ipc", "crpc", "420", "302", "section 27"]))):
+        if (
+            section_lower in query_lower
+            or title_lower in query_lower
+            or (statute_short and statute_short in query_lower)
+            or (
+                item.historical_reference
+                and any(term in query_lower for term in ["ipc", "crpc", "420", "302", "section 27"])
+            )
+        ):
             matches.append(item)
     return matches

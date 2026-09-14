@@ -27,6 +27,7 @@ from app.services.prompt_guard import check_for_injection, sanitize_user_input
 
 router = APIRouter(prefix="/verification", tags=["Evidence Grounding & Claim Verification"])
 
+
 @router.post("/", response_model=VerificationBatchResponse)
 @limiter.limit(settings.RATE_LIMIT_VERIFICATION)
 async def verify_claims_endpoint(
@@ -34,7 +35,7 @@ async def verify_claims_endpoint(
     request: Request,
     current_user: User = Depends(get_current_user_optional),
     ai_provider: BaseAIProvider = Depends(get_ai),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Evidence Grounding & Claim Verification Engine:
@@ -55,19 +56,27 @@ async def verify_claims_endpoint(
 
         # Strict BOLA / IDOR defense: enforce object-level authorization
         if not current_user:
-            from fastapi import HTTPException
+            from fastapi import HTTPException, status
+
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required to verify claims against private documents."
+                detail="Authentication required to verify claims against private documents.",
             )
         authorize_object_access(current_user, doc, Action.READ)
 
         chunks_res = await db.execute(
-            select(DocumentChunk).where(DocumentChunk.document_id == doc.id).order_by(DocumentChunk.chunk_index)
+            select(DocumentChunk)
+            .where(DocumentChunk.document_id == doc.id)
+            .order_by(DocumentChunk.chunk_index)
         )
         chunks = chunks_res.scalars().all()
         chunk_dicts = [
-            {"id": c.id, "page_number": c.page_number, "content": c.content, "clean_content": c.clean_content}
+            {
+                "id": c.id,
+                "page_number": c.page_number,
+                "content": c.content,
+                "clean_content": c.clean_content,
+            }
             for c in chunks
         ]
 
@@ -81,21 +90,27 @@ async def verify_claims_endpoint(
         result = await ai_provider.verify_claim(claim, chunk_dicts)
         verified_items.append(
             ClaimVerificationItem(
-                claim_id=f"CLM-{i+1:02d}",
+                claim_id=f"CLM-{i + 1:02d}",
                 claim_text=claim,
                 evidence_source=result.get("evidence_source", "General Sources"),
                 page_or_section=result.get("page_or_section"),
                 source_authority=result.get("source_authority", "Statute / Contract"),
                 source_date_or_version=result.get("source_date_or_version", "Current"),
-                verification_status=VerificationStatus(result.get("verification_status", "UNVERIFIED")),
+                verification_status=VerificationStatus(
+                    result.get("verification_status", "UNVERIFIED")
+                ),
                 confidence_strength=float(result.get("confidence_strength", 0.0)),
                 evidence_snippet=result.get("evidence_snippet"),
-                reasoning=result.get("reasoning", "")
+                reasoning=result.get("reasoning", ""),
             )
         )
 
-    supported_count = sum(1 for item in verified_items if item.verification_status == VerificationStatus.SUPPORTED)
-    conflicting_count = sum(1 for item in verified_items if item.verification_status == VerificationStatus.CONFLICTING)
+    supported_count = sum(
+        1 for item in verified_items if item.verification_status == VerificationStatus.SUPPORTED
+    )
+    conflicting_count = sum(
+        1 for item in verified_items if item.verification_status == VerificationStatus.CONFLICTING
+    )
 
     if conflicting_count > 0:
         summary_verdict = f"Caution: {conflicting_count} claim(s) conflict with official evidence or statutory protections."
@@ -110,14 +125,14 @@ async def verify_claims_endpoint(
         target_type="Verification",
         ip_address=request.client.host if request.client else None,
         status="SUCCESS",
-        details={"total_claims": len(req.claims), "supported": supported_count}
+        details={"total_claims": len(req.claims), "supported": supported_count},
     )
 
     return VerificationBatchResponse(
         document_id=req.document_id,
         total_claims=len(verified_items),
         results=verified_items,
-        summary_verdict=summary_verdict
+        summary_verdict=summary_verdict,
     )
 
 
@@ -125,7 +140,7 @@ async def verify_claims_endpoint(
 async def verify_claims_pipeline_endpoint(
     req: ClaimVerificationPipelineRequest,
     request: Request,
-    current_user: User = Depends(get_current_user_optional)
+    current_user: User = Depends(get_current_user_optional),
 ):
     """
     8-Stage Claim Verification Pipeline:
@@ -150,9 +165,8 @@ async def verify_claims_pipeline_endpoint(
             "total_claims": result.metrics.total_claims,
             "evidence_coverage": result.metrics.evidence_coverage,
             "unsupported_claim_rate": result.metrics.unsupported_claim_rate,
-            "safety_action": result.safety_gate_action
-        }
+            "safety_action": result.safety_gate_action,
+        },
     )
 
     return result
-

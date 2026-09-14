@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AlertCircle, ChevronDown, ChevronUp, ShieldAlert } from 'lucide-react';
+import { ChevronDown, ChevronUp, ShieldAlert } from 'lucide-react';
 import { Language, translations } from '@/lib/i18n';
 
 interface Props {

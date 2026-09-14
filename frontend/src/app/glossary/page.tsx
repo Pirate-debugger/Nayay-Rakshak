@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { BookOpen, Filter, Search, Sparkles } from 'lucide-react';
+import { BookOpen, Filter, Search } from 'lucide-react';
 import { useLanguage } from '@/components/AppShell';
 import { getGlossary } from '@/lib/api';
 import { GlossaryEntry } from '@/lib/types';
@@ -14,20 +14,22 @@ export default function GlossaryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchGlossary();
-  }, [search]);
+    let active = true;
+    getGlossary(search || undefined)
+      .then((res) => {
+        if (active) setTerms(res);
+      })
+      .catch(() => {
+        if (active) setTerms([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
 
-  const fetchGlossary = async () => {
-    try {
-      setLoading(true);
-      const res = await getGlossary(search || undefined);
-      setTerms(res);
-    } catch {
-      setTerms([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      active = false;
+    };
+  }, [search]);
 
   const categories = ['ALL', ...Array.from(new Set(terms.map((t) => t.category)))];
 

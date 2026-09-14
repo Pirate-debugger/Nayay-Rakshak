@@ -8,9 +8,7 @@ import pytest
 
 from app.ai.base import BaseAIProvider
 from app.schemas.risk import (
-    FindingType,
     RiskCategory,
-    RiskSeverity,
 )
 from app.services.risk_engine import risk_engine
 
@@ -41,7 +39,7 @@ class HallucinatingMockAIProvider(BaseAIProvider):
                     "finding": "Fraudulent criminal conspiracy",
                     "plain_language_explanation": "You will be robbed.",
                     "why_it_matters": "Total theft.",
-                    "affected_party": "Citizen"
+                    "affected_party": "Citizen",
                 },
                 # 2. Grounded risk with genuine quote that exists in text
                 {
@@ -52,8 +50,8 @@ class HallucinatingMockAIProvider(BaseAIProvider):
                     "finding": "Daily flat penalty charge detected.",
                     "plain_language_explanation": "Daily charges accumulate rapidly.",
                     "why_it_matters": "Increases debt burden.",
-                    "affected_party": "Tenant"
-                }
+                    "affected_party": "Tenant",
+                },
             ]
         }
 
@@ -61,6 +59,7 @@ class HallucinatingMockAIProvider(BaseAIProvider):
 # =====================================================================
 # 1. EVASIVE PHRASING & OBFUSCATED LEGALESE
 # =====================================================================
+
 
 @pytest.mark.asyncio
 async def test_evasive_uncapped_liability_phrasing():
@@ -76,9 +75,7 @@ async def test_evasive_uncapped_liability_phrasing():
 
 @pytest.mark.asyncio
 async def test_evasive_short_notice_phrasing():
-    evasive_text = (
-        "The Company reserves the prerogative to terminate the engagement forthwith without prior intimation."
-    )
+    evasive_text = "The Company reserves the prerogative to terminate the engagement forthwith without prior intimation."
     res = await risk_engine.analyze_document_risks(evasive_text)
     tim_risks = [r for r in res.risks if r.category == RiskCategory.TIME_DEADLINE]
     assert len(tim_risks) >= 1
@@ -88,6 +85,7 @@ async def test_evasive_short_notice_phrasing():
 # =====================================================================
 # 2. CAMOUFLAGED CLAUSES (BURIED IN BOILERPLATE)
 # =====================================================================
+
 
 @pytest.mark.asyncio
 async def test_camouflaged_penalty_in_miscellaneous():
@@ -107,6 +105,7 @@ async def test_camouflaged_penalty_in_miscellaneous():
 # 3. SUBTLE BOUNDARY & EDGE CASES
 # =====================================================================
 
+
 @pytest.mark.asyncio
 async def test_notice_boundary_cases():
     # 6 days triggers sub-7 day notice rule
@@ -115,7 +114,9 @@ async def test_notice_boundary_cases():
     assert any(r.rule_id == "RULE-TIM-001" for r in res_6.risks)
 
     # 15 days is standard commercial notice and should NOT trigger sub-7 day notice rule
-    text_15_days = "The landlord may terminate by providing 15 days written notice with dispute resolution."
+    text_15_days = (
+        "The landlord may terminate by providing 15 days written notice with dispute resolution."
+    )
     res_15 = await risk_engine.analyze_document_risks(text_15_days)
     assert not any(r.rule_id == "RULE-TIM-001" for r in res_15.risks)
 
@@ -137,16 +138,14 @@ async def test_interest_percentage_boundary_cases():
 # 4. UNGROUNDED AI HALLUCINATION REJECTION
 # =====================================================================
 
+
 @pytest.mark.asyncio
 async def test_strict_ai_hallucination_rejection():
     # Document contains realistic lease terms
     text = "The Lessee shall pay monthly rent of INR 40,000 and flat penalty of INR 1,000 per day if delayed."
     hallucinating_ai = HallucinatingMockAIProvider()
 
-    res = await risk_engine.analyze_document_risks(
-        document_text=text,
-        ai_provider=hallucinating_ai
-    )
+    res = await risk_engine.analyze_document_risks(document_text=text, ai_provider=hallucinating_ai)
 
     # Assert that the hallucinated risk was strictly dropped
     risk_titles = [r.title.lower() for r in res.risks]
@@ -160,6 +159,7 @@ async def test_strict_ai_hallucination_rejection():
 # =====================================================================
 # 5. MANDATORY LANGUAGE HEDGING COMPLIANCE
 # =====================================================================
+
 
 @pytest.mark.asyncio
 async def test_language_hedging_across_all_risks():
@@ -189,6 +189,7 @@ async def test_language_hedging_across_all_risks():
 # =====================================================================
 # 6. AUDIT TRAIL VERIFICATION
 # =====================================================================
+
 
 @pytest.mark.asyncio
 async def test_audit_trail_completeness():

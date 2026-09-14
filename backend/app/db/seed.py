@@ -48,7 +48,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                     "content": "Whoever, by deceiving any person, fraudulently or dishonestly induces the person so deceived to deliver any property to any person, or to consent that any person shall retain any property... commits cheating.",
                     "key_principles": '["Deceiving any person fraudulently or dishonestly", "Inducing delivery of property", "Punishable with imprisonment up to 7 years and fine"]',
                     "citizen_guidance": "If someone deceived you into transferring money or property with fraudulent intent, file a police complaint referencing BNS Section 318.",
-                    "historical_reference": "Formerly Section 420 of the Indian Penal Code, 1860 (IPC)"
+                    "historical_reference": "Formerly Section 420 of the Indian Penal Code, 1860 (IPC)",
                 },
                 {
                     "section_number": "Section 303",
@@ -56,7 +56,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                     "content": "Whoever, intending to take dishonestly any movable property out of the possession of any person without that person's consent, moves that property in order to such taking, is said to commit theft.",
                     "key_principles": '["Moving property dishonestly", "Lack of consent of possessor"]',
                     "citizen_guidance": "Report theft immediately at the nearest police station or file an e-FIR.",
-                    "historical_reference": "Formerly Section 378 & 379 of the Indian Penal Code, 1860 (IPC)"
+                    "historical_reference": "Formerly Section 378 & 379 of the Indian Penal Code, 1860 (IPC)",
                 },
                 {
                     "section_number": "Section 356",
@@ -64,9 +64,9 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                     "content": "Whoever, by words either spoken or intended to be read, or by signs or by visible representations, makes or publishes in any manner, any imputation concerning any person intending to harm... the reputation of such person, is said... to defame that person.",
                     "key_principles": '["Harming reputation of person", "Includes community service as alternative penalty"]',
                     "citizen_guidance": "Truth for public good and opinions expressed in good faith regarding public conduct are statutory exceptions.",
-                    "historical_reference": "Formerly Section 499 & 500 of the Indian Penal Code, 1860 (IPC)"
-                }
-            ]
+                    "historical_reference": "Formerly Section 499 & 500 of the Indian Penal Code, 1860 (IPC)",
+                },
+            ],
         },
         {
             "code": "BNSS_2023",
@@ -86,7 +86,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                     "content": "Every information relating to the commission of a cognizable offence... may be given orally or by electronic communication... and if given by electronic communication, shall be taken on record by him on being signed within three days by the person giving it.",
                     "key_principles": '["Zero FIR can be filed at ANY police station in India", "Mandatory electronic or physical registration", "Free copy of FIR must be given immediately"]',
                     "citizen_guidance": "No police officer can refuse to register an FIR on grounds of territorial jurisdiction. Insist on a Zero FIR.",
-                    "historical_reference": "Formerly Section 154 of the Code of Criminal Procedure, 1973 (CrPC)"
+                    "historical_reference": "Formerly Section 154 of the Code of Criminal Procedure, 1973 (CrPC)",
                 },
                 {
                     "section_number": "Section 35",
@@ -94,9 +94,9 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                     "content": "The designated police officer in every district and at every police station shall maintain information regarding arrested persons.",
                     "key_principles": '["Right to inform family immediately upon arrest", "Right to legal counsel during interrogation", "Designation of arrest information officer"]',
                     "citizen_guidance": "If detained or arrested, demand immediate notification to family and access to an advocate or free legal aid counsel.",
-                    "historical_reference": "Expands Section 41B & 41D of CrPC"
-                }
-            ]
+                    "historical_reference": "Expands Section 41B & 41D of CrPC",
+                },
+            ],
         },
         {
             "code": "CPA_2019",
@@ -116,9 +116,9 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                     "content": "An unfair contract means a contract between a manufacturer or trader or service provider on one hand, and a consumer on the other, having such terms which cause significant change in the rights of such consumer...",
                     "key_principles": '["Requiring excessive security deposits", "Imposing disproportionate penalties for breach", "Unilateral termination without reasonable cause", "Permitting unilateral variation of terms"]',
                     "citizen_guidance": "Clauses like 'fees are strictly non-refundable under all conditions' or 18% late fees on consumers are unfair and voidable in consumer forums.",
-                    "historical_reference": "Enacted in 2019, superseding Consumer Protection Act, 1986"
+                    "historical_reference": "Enacted in 2019, superseding Consumer Protection Act, 1986",
                 }
-            ]
+            ],
         },
         {
             "code": "ICA_1872",
@@ -138,7 +138,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                     "content": "Every agreement by which any one is restrained from exercising a lawful profession, trade or business of any kind, is to that extent void.",
                     "key_principles": '["Post-employment non-compete clauses are void ab initio", "Citizen right to earn livelihood is constitutionally and statutorily protected"]',
                     "citizen_guidance": "An employer cannot prevent you from working for a competitor after your employment ends. Post-exit non-compete covenants are unenforceable in India.",
-                    "historical_reference": "Section 27, Indian Contract Act 1872 (Supreme Court: Percept D'Mark v. Zaheer Khan)"
+                    "historical_reference": "Section 27, Indian Contract Act 1872 (Supreme Court: Percept D'Mark v. Zaheer Khan)",
                 },
                 {
                     "section_number": "Section 74",
@@ -146,9 +146,9 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                     "content": "When a contract has been broken, if a sum is named in the contract as the amount to be paid in case of such breach... the party complaining of the breach is entitled... to receive reasonable compensation not exceeding the amount so named.",
                     "key_principles": '["Penal interest or extortionate forfeitures cannot be claimed as of right", "Court/Arbitrator will award only reasonable damages, not windfall penalties"]',
                     "citizen_guidance": "A landlord cannot automatically confiscate an entire 6-month security deposit for a minor 2-day delay in rent.",
-                    "historical_reference": "Section 74, Indian Contract Act 1872 (Supreme Court: Maula Bux v. Union of India)"
-                }
-            ]
+                    "historical_reference": "Section 74, Indian Contract Act 1872 (Supreme Court: Maula Bux v. Union of India)",
+                },
+            ],
         },
         {
             "code": "MTA_2021",
@@ -168,14 +168,16 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                     "content": "The security deposit to be paid by the tenant in advance shall not exceed two months' rent for residential premises, and one month's notice in writing is required for tenancy termination.",
                     "key_principles": '["Capped security deposit (maximum 2 months for residential)", "Mandatory 24-hour advance notice before landlord inspection", "One month reciprocal notice period"]',
                     "citizen_guidance": "Demands for 6-10 months security deposit for residential tenancy violate Model Tenancy principles.",
-                    "historical_reference": "Model legislation approved by Union Cabinet on 2 June 2021"
+                    "historical_reference": "Model legislation approved by Union Cabinet on 2 June 2021",
                 }
-            ]
-        }
+            ],
+        },
     ]
 
     for s_data in statutes_data:
-        existing_res = await db.execute(select(LegalSource).where(LegalSource.code == s_data["code"]))
+        existing_res = await db.execute(
+            select(LegalSource).where(LegalSource.code == s_data["code"])
+        )
         source = existing_res.scalar_one_or_none()
         if not source:
             source = LegalSource(
@@ -188,7 +190,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                 effective_from=s_data["effective_from"],
                 status=s_data["status"],
                 version=s_data["version"],
-                official_url=s_data["official_url"]
+                official_url=s_data["official_url"],
             )
             db.add(source)
             await db.commit()
@@ -198,7 +200,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
             sec_res = await db.execute(
                 select(SourceDocument).where(
                     SourceDocument.legal_source_id == source.id,
-                    SourceDocument.section_number == sec["section_number"]
+                    SourceDocument.section_number == sec["section_number"],
                 )
             )
             if not sec_res.scalar_one_or_none():
@@ -209,7 +211,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                     content=sec["content"],
                     key_principles=sec["key_principles"],
                     citizen_guidance=sec["citizen_guidance"],
-                    historical_reference=sec["historical_reference"]
+                    historical_reference=sec["historical_reference"],
                 )
                 db.add(doc_sec)
 
@@ -226,7 +228,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
             "website_url": "https://nalsa.gov.in",
             "office_address": "B-Block, Additional Building Complex, Supreme Court of India, New Delhi - 110001",
             "services_offered": '["Free Legal Aid for Eligible Citizens", "Lok Adalat Dispute Resolution", "Legal Literacy & Clinics", "Legal Aid Counsel in Courts"]',
-            "income_ceiling_inr": 300000
+            "income_ceiling_inr": 300000,
         },
         {
             "name": "Delhi State Legal Services Authority (DSLSA)",
@@ -237,7 +239,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
             "website_url": "https://dslsa.org",
             "office_address": "Central Office, Patiala House Courts Complex, New Delhi - 110001",
             "services_offered": '["Free Legal Advice", "Court Representation", "Mediation & Conciliation", "Victim Compensation Assistance"]',
-            "income_ceiling_inr": 300000
+            "income_ceiling_inr": 300000,
         },
         {
             "name": "Tele-Law: Access to Justice at Panchayat Level",
@@ -248,7 +250,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
             "website_url": "https://www.tele-law.in",
             "office_address": "Department of Justice, Jaisalmer House, 26 Man Singh Road, New Delhi",
             "services_offered": '["Video-consultation with Panel Lawyers at Common Service Centres (CSCs)", "Pre-litigation legal advice", "Bilingual assistance"]',
-            "income_ceiling_inr": 300000
+            "income_ceiling_inr": 300000,
         },
         {
             "name": "National Consumer Helpline (NCH)",
@@ -259,12 +261,14 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
             "website_url": "https://consumerhelpline.gov.in",
             "office_address": "Indian Institute of Public Administration, I.P. Estate, Ring Road, New Delhi - 110002",
             "services_offered": '["Consumer Grievance Registration", "e-Daakhil Portal Assistance", "Company Escalation Tracking", "Mediation Assistance"]',
-            "income_ceiling_inr": 1000000
-        }
+            "income_ceiling_inr": 1000000,
+        },
     ]
 
     for aid in aid_directory:
-        existing_aid = await db.execute(select(LegalAidResource).where(LegalAidResource.name == aid["name"]))
+        existing_aid = await db.execute(
+            select(LegalAidResource).where(LegalAidResource.name == aid["name"])
+        )
         if not existing_aid.scalar_one_or_none():
             resource = LegalAidResource(
                 name=aid["name"],
@@ -276,7 +280,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                 office_address=aid["office_address"],
                 services_offered=aid["services_offered"],
                 income_ceiling_inr=aid["income_ceiling_inr"],
-                is_free_service=True
+                is_free_service=True,
             )
             db.add(resource)
 
@@ -285,12 +289,13 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
     # -------------------------------------------------------------------------
     if include_demo:
         demo_org_slug = "demo-citizen-clinic"
-        demo_org_res = await db.execute(select(Organization).where(Organization.slug == demo_org_slug))
+        demo_org_res = await db.execute(
+            select(Organization).where(Organization.slug == demo_org_slug)
+        )
         demo_org = demo_org_res.scalar_one_or_none()
         if not demo_org:
             demo_org = Organization(
-                name="[DEMO] Nyaya Citizen Legal Aid Clinic",
-                slug=demo_org_slug
+                name="[DEMO] Nyaya Citizen Legal Aid Clinic", slug=demo_org_slug
             )
             db.add(demo_org)
             await db.commit()
@@ -305,7 +310,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                 hashed_password=get_password_hash("DemoCitizen2026!"),
                 full_name="[DEMO] Ananya Sharma",
                 role="user",
-                is_demo=True
+                is_demo=True,
             )
             db.add(demo_user)
             await db.commit()
@@ -313,9 +318,7 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
 
             # Add demo membership
             membership = Membership(
-                organization_id=demo_org.id,
-                user_id=demo_user.id,
-                role="member"
+                organization_id=demo_org.id, user_id=demo_user.id, role="member"
             )
             db.add(membership)
 
@@ -327,16 +330,14 @@ async def seed_database(db: AsyncSession, include_demo: bool = True) -> None:
                 hashed_password=get_password_hash("DemoAdvocate2026!"),
                 full_name="[DEMO] Adv. Rajesh Verma",
                 role="advocate",
-                is_demo=True
+                is_demo=True,
             )
             db.add(demo_adv)
             await db.commit()
             await db.refresh(demo_adv)
 
             membership_adv = Membership(
-                organization_id=demo_org.id,
-                user_id=demo_adv.id,
-                role="advocate"
+                organization_id=demo_org.id, user_id=demo_adv.id, role="advocate"
             )
             db.add(membership_adv)
 

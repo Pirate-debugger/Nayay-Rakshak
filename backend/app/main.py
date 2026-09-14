@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.api.v1 import (
@@ -26,12 +25,13 @@ from app.core.security_headers import SecurityHeadersMiddleware
 from app.db.base import init_db
 
 logger = logging.getLogger("nyaya_rakshak.main")
- 
+
 LEGAL_DISCLAIMER_TEXT = (
     "Nyaya Rakshak is an AI-powered legal clarity and educational assistance platform. "
     "It does NOT provide legal advice, does NOT constitute an attorney-client relationship, "
     "and cannot guarantee legal outcomes. Consult a qualified advocate for official representation."
 )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,12 +43,14 @@ async def lifespan(app: FastAPI):
     try:
         from app.db.base import AsyncSessionLocal
         from app.db.seed import seed_database
+
         async with AsyncSessionLocal() as session:
             include_demo = settings.ENABLE_DEMO_ACCOUNTS or not settings.is_production()
             await seed_database(session, include_demo=include_demo)
     except Exception as e:
         logger.warning(f"Database seed initialization warning: {e}")
     yield
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -57,20 +59,21 @@ app = FastAPI(
         "Citizen-centric GenAI platform for legal document clarity, verification, and action navigation in India. "
         "AI explains. Evidence supports. Verification checks. Rules calculate. Humans decide."
     ),
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 app.state.limiter = limiter
 
+
 def custom_rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
     msg = f"Rate limit exceeded: {exc.detail}"
-    response = JSONResponse(
-        status_code=429,
-        content={"detail": msg, "error": msg}
-    )
+    response = JSONResponse(status_code=429, content={"detail": msg, "error": msg})
     if hasattr(request.state, "view_rate_limit"):
-        response = request.app.state.limiter._inject_headers(response, request.state.view_rate_limit)
+        response = request.app.state.limiter._inject_headers(
+            response, request.state.view_rate_limit
+        )
     return response
+
 
 app.add_exception_handler(RateLimitExceeded, custom_rate_limit_exceeded_handler)
 
@@ -96,14 +99,20 @@ app.add_middleware(
     allow_headers=ALLOWED_CORS_HEADERS,
 )
 
+
 # Generic safe exception handler to prevent internal stack trace leakage
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled system error on {request.method} {request.url.path}: {exc}", exc_info=True)
+    logger.error(
+        f"Unhandled system error on {request.method} {request.url.path}: {exc}", exc_info=True
+    )
     return JSONResponse(
         status_code=500,
-        content={"detail": "An internal system error occurred. Please try again or contact support."}
+        content={
+            "detail": "An internal system error occurred. Please try again or contact support."
+        },
     )
+
 
 # Mount v1 routers
 api_prefix = settings.API_V1_STR
@@ -129,5 +138,5 @@ async def health_check():
         "version": settings.VERSION,
         "ai_provider": settings.AI_PROVIDER,
         "gemini_configured": bool(settings.GEMINI_API_KEY),
-        "legal_disclaimer": LEGAL_DISCLAIMER_TEXT
+        "legal_disclaimer": LEGAL_DISCLAIMER_TEXT,
     }

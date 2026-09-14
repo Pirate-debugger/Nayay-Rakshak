@@ -280,19 +280,22 @@ function QuestionCard({ q, lang }: { q: NavQuestionItem; lang: 'en' | 'hi' }) {
         <CircleHelp className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden />
         <div className="flex-1">
           <p className="text-sm text-slate-100 leading-relaxed">{q.question}</p>
-          <p className="text-xs text-slate-500 mt-0.5">Ask: <span className="text-slate-400">{q.ask_whom}</span></p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {lang === 'hi' ? 'किससे पूछें: ' : 'Ask: '}
+            <span className="text-slate-400">{q.ask_whom}</span>
+          </p>
         </div>
         <button
           onClick={() => setOpen(!open)}
-          className="flex-shrink-0 p-1 text-slate-500 hover:text-slate-300 transition"
-          aria-label="Toggle purpose"
+          className="flex-shrink-0 p-1 text-slate-500 hover:text-slate-300 transition cursor-pointer"
+          aria-label={open ? (lang === 'hi' ? 'विवरण छुपाएं' : 'Hide details') : (lang === 'hi' ? 'विवरण देखें' : 'Show details')}
         >
           {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
       </div>
       {open && (
         <p className="text-xs text-slate-300 pl-6 leading-relaxed border-t border-slate-800/60 pt-2">
-          <span className="text-slate-500">Purpose:</span> {q.purpose}
+          <span className="text-slate-500">{lang === 'hi' ? 'उद्देश्य:' : 'Purpose:'}</span> {q.purpose}
         </p>
       )}
     </div>

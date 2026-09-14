@@ -1,5 +1,6 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -73,7 +74,7 @@ class ClauseDiffItem(BaseModel):
     change_type: str  # "ADDED", "REMOVED", "MODIFIED", "UNCHANGED"
     base_text: Optional[str] = None
     target_text: Optional[str] = None
-    risk_delta: str   # "INCREASED_RISK", "DECREASED_RISK", "NEUTRAL"
+    risk_delta: str  # "INCREASED_RISK", "DECREASED_RISK", "NEUTRAL"
     impact_analysis: str
 
 

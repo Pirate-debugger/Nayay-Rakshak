@@ -1,7 +1,7 @@
 import pytest
 
+from app.services.nyaya_bench.reporter import compare_runs, generate_markdown_report
 from app.services.nyaya_bench.runner import NYAYABenchRunner
-from app.services.nyaya_bench.reporter import generate_markdown_report, compare_runs
 
 
 @pytest.mark.asyncio

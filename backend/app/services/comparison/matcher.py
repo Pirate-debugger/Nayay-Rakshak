@@ -1,7 +1,8 @@
 import re
-from typing import Dict, List, Optional, Set, Tuple
-from app.services.comparison.segmenter import ComparisonClause
+from typing import List, Optional, Set, Tuple
+
 from app.schemas.comparison import StructuralDiff
+from app.services.comparison.segmenter import ComparisonClause
 
 
 def normalize_ocr_text(text: str) -> str:
@@ -14,7 +15,7 @@ def normalize_ocr_text(text: str) -> str:
     """
     if not text:
         return ""
-        
+
     s = text
     # Smart quotes & dashes
     s = s.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
@@ -22,17 +23,17 @@ def normalize_ocr_text(text: str) -> str:
     s = s.replace("ﬁ", "fi").replace("ﬂ", "fl")
 
     # Fix OCR digit substitutions: 'l' or 'I' for 1
-    s = re.sub(r'(?<=[₹$Rs\.\s])([lI])(?=[0-9])', '1', s)
-    s = re.sub(r'\b([lI])(?=[0-9])', '1', s)
-    s = re.sub(r'(?<=[0-9])([lI])', '1', s)
+    s = re.sub(r"(?<=[₹$Rs\.\s])([lI])(?=[0-9])", "1", s)
+    s = re.sub(r"\b([lI])(?=[0-9])", "1", s)
+    s = re.sub(r"(?<=[0-9])([lI])", "1", s)
 
     # Fix OCR digit substitutions: 'O' or 'o' for 0 in numbers (e.g. 15,OOO or 3O,OOO or l0th)
     for _ in range(4):
-        s = re.sub(r'(?<=[0-9,₹$])([Oo])(?=[0-9,Oo]|\b)', '0', s)
-        s = re.sub(r'\b([Oo])(?=[0-9,])', '0', s)
+        s = re.sub(r"(?<=[0-9,₹$])([Oo])(?=[0-9,Oo]|\b)", "0", s)
+        s = re.sub(r"\b([Oo])(?=[0-9,])", "0", s)
 
     # Whitespace cleanup
-    s = re.sub(r'\s+', ' ', s).strip()
+    s = re.sub(r"\s+", " ", s).strip()
     return s
 
 
@@ -55,13 +56,13 @@ def compute_char_dice(text_a: str, text_b: str) -> float:
 
     a_lower = text_a.lower()
     b_lower = text_b.lower()
-    
-    ngrams_a = [a_lower[i:i+2] for i in range(len(a_lower)-1)]
-    ngrams_b = [b_lower[i:i+2] for i in range(len(b_lower)-1)]
-    
+
+    ngrams_a = [a_lower[i : i + 2] for i in range(len(a_lower) - 1)]
+    ngrams_b = [b_lower[i : i + 2] for i in range(len(b_lower) - 1)]
+
     set_a = set(ngrams_a)
     set_b = set(ngrams_b)
-    
+
     common = sum(min(ngrams_a.count(ng), ngrams_b.count(ng)) for ng in (set_a & set_b))
     total = len(ngrams_a) + len(ngrams_b)
     return (2.0 * common) / total if total > 0 else 0.0
@@ -69,9 +70,13 @@ def compute_char_dice(text_a: str, text_b: str) -> float:
 
 def compute_heading_overlap(h_a: str, h_b: str) -> float:
     stop_words = {"clause", "section", "article", "and", "the", "of", "to", "for", "in"}
-    toks_a = {w.lower() for w in re.findall(r"\w+", h_a) if w.lower() not in stop_words and len(w) > 2}
-    toks_b = {w.lower() for w in re.findall(r"\w+", h_b) if w.lower() not in stop_words and len(w) > 2}
-    
+    toks_a = {
+        w.lower() for w in re.findall(r"\w+", h_a) if w.lower() not in stop_words and len(w) > 2
+    }
+    toks_b = {
+        w.lower() for w in re.findall(r"\w+", h_b) if w.lower() not in stop_words and len(w) > 2
+    }
+
     if not toks_a or not toks_b:
         return 0.0
     return compute_token_jaccard(toks_a, toks_b)
@@ -87,19 +92,36 @@ def compute_clause_similarity(clause_a: ComparisonClause, clause_b: ComparisonCl
     """
     norm_a = normalize_ocr_text(clause_a.text)
     norm_b = normalize_ocr_text(clause_b.text)
-    
+
     # Exact normalized match
     if norm_a.lower() == norm_b.lower():
         return 1.0
 
     char_sim = compute_char_dice(norm_a, norm_b)
-    
+
     # Meaningful legal tokens (exclude basic grammar stop words)
-    stop_words = {"the", "and", "or", "of", "to", "a", "an", "is", "in", "it", "that", "this", "by", "for", "with", "as"}
+    stop_words = {
+        "the",
+        "and",
+        "or",
+        "of",
+        "to",
+        "a",
+        "an",
+        "is",
+        "in",
+        "it",
+        "that",
+        "this",
+        "by",
+        "for",
+        "with",
+        "as",
+    }
     t_a = {t for t in clause_a.tokens if t not in stop_words}
     t_b = {t for t in clause_b.tokens if t not in stop_words}
     token_sim = compute_token_jaccard(t_a, t_b)
-    
+
     heading_sim = compute_heading_overlap(clause_a.section_heading, clause_b.section_heading)
 
     # If headings strongly match (e.g. "TERMINATION" vs "TERMINATION"), give strong anchor
@@ -113,7 +135,7 @@ class AlignedClausePair:
         clause_a: Optional[ComparisonClause],
         clause_b: Optional[ComparisonClause],
         similarity: float,
-        is_reordered: bool = False
+        is_reordered: bool = False,
     ):
         self.clause_a = clause_a
         self.clause_b = clause_b
@@ -124,7 +146,7 @@ class AlignedClausePair:
 def match_document_clauses(
     clauses_a: List[ComparisonClause],
     clauses_b: List[ComparisonClause],
-    min_match_threshold: float = 0.28
+    min_match_threshold: float = 0.28,
 ) -> Tuple[List[AlignedClausePair], StructuralDiff]:
     """
     Bipartite alignment of clauses between Document A and Document B.
@@ -169,35 +191,31 @@ def match_document_clauses(
             is_reordered = True
             reordered_count += 1
         last_j = max(last_j, j)
-        aligned_pairs.append(AlignedClausePair(
-            clause_a=clauses_a[i],
-            clause_b=clauses_b[j],
-            similarity=sim,
-            is_reordered=is_reordered
-        ))
+        aligned_pairs.append(
+            AlignedClausePair(
+                clause_a=clauses_a[i],
+                clause_b=clauses_b[j],
+                similarity=sim,
+                is_reordered=is_reordered,
+            )
+        )
 
     # Unmatched in A -> Missing in B
     missing_in_b_count = 0
     for i, ca in enumerate(clauses_a):
         if i not in matched_a:
-            aligned_pairs.append(AlignedClausePair(
-                clause_a=ca,
-                clause_b=None,
-                similarity=0.0,
-                is_reordered=False
-            ))
+            aligned_pairs.append(
+                AlignedClausePair(clause_a=ca, clause_b=None, similarity=0.0, is_reordered=False)
+            )
             missing_in_b_count += 1
 
     # Unmatched in B -> New in B
     new_in_b_count = 0
     for j, cb in enumerate(clauses_b):
         if j not in matched_b:
-            aligned_pairs.append(AlignedClausePair(
-                clause_a=None,
-                clause_b=cb,
-                similarity=0.0,
-                is_reordered=False
-            ))
+            aligned_pairs.append(
+                AlignedClausePair(clause_a=None, clause_b=cb, similarity=0.0, is_reordered=False)
+            )
             new_in_b_count += 1
 
     # Compute structural alignment score
@@ -213,7 +231,7 @@ def match_document_clauses(
         reordered_clause_count=reordered_count,
         missing_in_b_count=missing_in_b_count,
         new_in_b_count=new_in_b_count,
-        structural_alignment_score=round(alignment_score, 3)
+        structural_alignment_score=round(alignment_score, 3),
     )
 
     return aligned_pairs, structural_diff

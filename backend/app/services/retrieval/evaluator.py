@@ -14,34 +14,33 @@ from typing import Any, Dict, List
 from app.schemas.retrieval import RetrievalResponse
 from app.services.retrieval.retriever import legal_retriever
 
-
 # Research Benchmark Test Queries with known ground-truth statutory targets
 STANDARD_LEGAL_BENCHMARKS = [
     {
         "query": "What is the legal punishment for cheating under BNS 2023?",
         "expected_source_ids": ["BNS-2023-SEC-318"],
-        "expected_intent": "legal-source"
+        "expected_intent": "legal-source",
     },
     {
         "query": "Is a post-employment non-compete clause enforceable under Indian law?",
         "expected_source_ids": ["ICA-1872-SEC-27", "SC-2006-PERCEPT-ZAHEER"],
-        "expected_intent": "legal-source"
+        "expected_intent": "legal-source",
     },
     {
         "query": "What is the maximum residential security deposit allowed under Model Tenancy Act?",
         "expected_source_ids": ["MTA-2021-SEC-21"],
-        "expected_intent": "legal-source"
+        "expected_intent": "legal-source",
     },
     {
         "query": "Can an interested party unilaterally appoint the sole arbitrator?",
         "expected_source_ids": ["SC-2019-PERKINS-EASTMAN"],
-        "expected_intent": "legal-source"
+        "expected_intent": "legal-source",
     },
     {
         "query": "How to register an e-FIR for a stolen mobile under BNSS?",
         "expected_source_ids": ["BNSS-2023-SEC-173"],
-        "expected_intent": "legal-source"
-    }
+        "expected_intent": "legal-source",
+    },
 ]
 
 
@@ -52,9 +51,7 @@ class RetrievalEvaluator:
         self.retriever = retriever or legal_retriever
 
     async def evaluate_benchmarks(
-        self,
-        benchmarks: List[Dict[str, Any]] = None,
-        k_values: List[int] = None
+        self, benchmarks: List[Dict[str, Any]] = None, k_values: List[int] = None
     ) -> Dict[str, float]:
         benchmarks = benchmarks or STANDARD_LEGAL_BENCHMARKS
         k_values = k_values or [1, 3, 5]
@@ -103,7 +100,9 @@ class RetrievalEvaluator:
             "mrr": round(sum(reciprocal_ranks) / max(1, len(reciprocal_ranks)), 4),
         }
         for k in k_values:
-            metrics[f"precision@{k}"] = round(sum(precisions_at_k[k]) / max(1, len(precisions_at_k[k])), 4)
+            metrics[f"precision@{k}"] = round(
+                sum(precisions_at_k[k]) / max(1, len(precisions_at_k[k])), 4
+            )
             metrics[f"recall@{k}"] = round(sum(recalls_at_k[k]) / max(1, len(recalls_at_k[k])), 4)
             metrics[f"ndcg@{k}"] = round(sum(ndcgs_at_k[k]) / max(1, len(ndcgs_at_k[k])), 4)
 

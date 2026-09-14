@@ -9,6 +9,7 @@ class BriefCreateRequest(BaseModel):
     client_name: str
     specific_questions: Optional[List[str]] = None
 
+
 class BriefResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

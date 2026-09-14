@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { AlertCircle, FileUp, Lock, ShieldCheck } from 'lucide-react';
+import { AlertCircle, FileUp, ShieldCheck } from 'lucide-react';
 import { uploadDocument } from '@/lib/api';
 import { DocumentMeta } from '@/lib/types';
 import { Language } from '@/lib/i18n';

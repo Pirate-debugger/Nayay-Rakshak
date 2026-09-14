@@ -1,10 +1,10 @@
 import io
 import os
+
 import pytest
 from httpx import AsyncClient
 from PIL import Image
 
-from app.core.config import settings
 from app.core.file_security import (
     detect_malicious_content,
     generate_secure_storage_name,
@@ -14,14 +14,16 @@ from app.core.file_security import (
 )
 from app.services.document_parser import (
     chunk_document_with_provenance,
-    extract_document_structure,
 )
 from app.services.ocr_service import extract_image_ocr_layout, is_scanned_page
 
 
 def test_sanitize_filename():
     assert sanitize_filename("../../malicious/path.pdf") == "path.pdf"
-    assert sanitize_filename("..\\..\\windows\\system32\\evil.docx") in ["evil.docx", "windowssystem32evil.docx"]
+    assert sanitize_filename("..\\..\\windows\\system32\\evil.docx") in [
+        "evil.docx",
+        "windowssystem32evil.docx",
+    ]
     assert sanitize_filename("safe document 123.pdf") == "safe_document_123.pdf"
 
 
@@ -85,7 +87,6 @@ def test_validate_file_magic_and_mime():
         validate_file_magic_and_mime(b"Not a real pdf at all", "fake.pdf")
 
 
-
 def test_ocr_and_scanned_page_heuristic():
     # Create synthetic test image
     img = Image.new("RGB", (200, 100), color=(255, 255, 255))
@@ -107,15 +108,11 @@ def test_chunk_provenance():
     pages = [
         {
             "page_number": 1,
-            "clean_text": "Section 1. Agreement terms.\n\nSection 2. Financial payment obligations."
+            "clean_text": "Section 1. Agreement terms.\n\nSection 2. Financial payment obligations.",
         }
     ]
     chunks = chunk_document_with_provenance(
-        pages=pages,
-        sections=[],
-        content_hash="abc123hash",
-        document_id=1,
-        version_id=1
+        pages=pages, sections=[], content_hash="abc123hash", document_id=1, version_id=1
     )
     assert len(chunks) >= 1
     c = chunks[0]
@@ -138,6 +135,7 @@ def test_secure_delete_file(tmp_path):
 # =====================================================================
 # API Integration Ingestion Security Tests
 # =====================================================================
+
 
 @pytest.mark.asyncio
 async def test_upload_rejects_disallowed_extension(client: AsyncClient, auth_headers: dict):

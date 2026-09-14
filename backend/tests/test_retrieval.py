@@ -11,17 +11,13 @@ Validates:
 8. IR evaluation benchmark execution (MRR, Precision, Recall, NDCG)
 """
 
-from datetime import datetime, timezone
 import pytest
 
 from app.schemas.retrieval import (
     EvidenceType,
     QueryIntent,
-    RetrievalFilter,
-    SourceStatus,
     SourceTier,
 )
-from app.services.retrieval.classifier import query_classifier
 from app.services.retrieval.evaluator import STANDARD_LEGAL_BENCHMARKS, retrieval_evaluator
 from app.services.retrieval.provider import legal_source_provider
 from app.services.retrieval.registry import source_registry
@@ -36,7 +32,7 @@ async def test_multi_stream_separation_hybrid():
         {
             "content": "Clause 8.1: The employee shall not join any competing software firm for 2 years post termination.",
             "page_number": 2,
-            "section_heading": "Restrictive Covenants"
+            "section_heading": "Restrictive Covenants",
         }
     ]
     query = "Does my contract clause on non-compete violate Section 27 of Contract Act?"
@@ -62,8 +58,16 @@ async def test_multi_stream_separation_hybrid():
 async def test_document_only_query():
     """Verifies document-only query intent classification and retrieval."""
     user_chunks = [
-        {"content": "Rent is payable on the 5th of each calendar month to the landlord.", "page_number": 1, "section_heading": "Rent Payment"},
-        {"content": "Security deposit of ₹50,000 shall be maintained with lessor.", "page_number": 1, "section_heading": "Deposit"}
+        {
+            "content": "Rent is payable on the 5th of each calendar month to the landlord.",
+            "page_number": 1,
+            "section_heading": "Rent Payment",
+        },
+        {
+            "content": "Security deposit of ₹50,000 shall be maintained with lessor.",
+            "page_number": 1,
+            "section_heading": "Deposit",
+        },
     ]
     query = "What is the due date for rent in my lease agreement?"
     resp = await legal_retriever.retrieve(query=query, document_chunks=user_chunks, top_k=3)
@@ -119,15 +123,21 @@ async def test_strict_jurisdiction_isolation_delhi_vs_maharashtra():
     delhi_ids = [i.item_id for i in resp_delhi.reranked_items]
 
     assert "DRCA-1958-SEC-14" in delhi_ids
-    assert "MRCA-1999-SEC-15" not in delhi_ids, "Maharashtra law was erroneously mixed into Delhi query!"
+    assert "MRCA-1999-SEC-15" not in delhi_ids, (
+        "Maharashtra law was erroneously mixed into Delhi query!"
+    )
 
     # 2. Maharashtra Query
-    mumbai_query = "What are the eviction rules for a tenant in Mumbai Maharashtra paying standard rent?"
+    mumbai_query = (
+        "What are the eviction rules for a tenant in Mumbai Maharashtra paying standard rent?"
+    )
     resp_mumbai = await legal_retriever.retrieve(query=mumbai_query, top_k=5)
     mumbai_ids = [i.item_id for i in resp_mumbai.reranked_items]
 
     assert "MRCA-1999-SEC-15" in mumbai_ids
-    assert "DRCA-1958-SEC-14" not in mumbai_ids, "Delhi law was erroneously mixed into Maharashtra query!"
+    assert "DRCA-1958-SEC-14" not in mumbai_ids, (
+        "Delhi law was erroneously mixed into Maharashtra query!"
+    )
 
 
 @pytest.mark.asyncio
@@ -141,14 +151,20 @@ async def test_provenance_and_zero_fabricated_urls():
 
     for s in sources:
         assert s.official_url.startswith("https://")
-        assert any(domain in s.official_url for domain in [
-            ".gov.in", ".nic.in", "sci.gov.in", "bombayhighcourt.nic.in"
-        ]), f"Source {s.source_id} URL {s.official_url} is not an authentic official government/court domain!"
+        assert any(
+            domain in s.official_url
+            for domain in [".gov.in", ".nic.in", "sci.gov.in", "bombayhighcourt.nic.in"]
+        ), (
+            f"Source {s.source_id} URL {s.official_url} is not an authentic official government/court domain!"
+        )
 
         assert len(s.content) > 20
         assert len(s.key_principles) >= 1
         assert s.authority_level is not None
-        assert s.tier in [SourceTier.TIER_1_OFFICIAL_LEGISLATION_COURTS, SourceTier.TIER_2_OFFICIAL_INSTITUTIONS]
+        assert s.tier in [
+            SourceTier.TIER_1_OFFICIAL_LEGISLATION_COURTS,
+            SourceTier.TIER_2_OFFICIAL_INSTITUTIONS,
+        ]
 
 
 @pytest.mark.asyncio
@@ -162,7 +178,10 @@ async def test_explicit_unretrieved_evidence_disclaimer():
 
     assert resp.has_authoritative_evidence is False
     assert resp.explicit_unretrieved_disclaimer is not None
-    assert "Authoritative statutory or judicial evidence could not be retrieved" in resp.explicit_unretrieved_disclaimer
+    assert (
+        "Authoritative statutory or judicial evidence could not be retrieved"
+        in resp.explicit_unretrieved_disclaimer
+    )
 
 
 @pytest.mark.asyncio
@@ -192,7 +211,9 @@ async def test_ir_evaluation_benchmark_execution():
     Executes real retrieval benchmark queries and checks calculated IR metrics.
     No static or fake metrics.
     """
-    metrics = await retrieval_evaluator.evaluate_benchmarks(benchmarks=STANDARD_LEGAL_BENCHMARKS, k_values=[1, 3, 5])
+    metrics = await retrieval_evaluator.evaluate_benchmarks(
+        benchmarks=STANDARD_LEGAL_BENCHMARKS, k_values=[1, 3, 5]
+    )
 
     assert "mrr" in metrics
     assert "precision@1" in metrics

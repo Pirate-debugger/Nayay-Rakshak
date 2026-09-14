@@ -11,14 +11,10 @@ engine_kwargs = {}
 if settings.DATABASE_URL.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=False,
-    future=True,
-    **engine_kwargs
-)
+engine = create_async_engine(settings.DATABASE_URL, echo=False, future=True, **engine_kwargs)
 
 if settings.DATABASE_URL.startswith("sqlite"):
+
     @event.listens_for(engine.sync_engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         """Enable Write-Ahead Logging (WAL) and memory caching for high-concurrency SQLite."""
@@ -32,6 +28,7 @@ if settings.DATABASE_URL.startswith("sqlite"):
         except Exception:
             pass
 
+
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
@@ -41,6 +38,7 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 Base = declarative_base()
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for obtaining async DB session."""
@@ -54,8 +52,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         finally:
             await session.close()
 
+
 async def init_db() -> None:
     """Initialize database schemas."""
     import app.db.models  # noqa: F401
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

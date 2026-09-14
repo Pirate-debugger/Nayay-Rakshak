@@ -7,7 +7,8 @@ Computes verifiable, non-fabricated quality metrics from actual pipeline verific
 RULE: All evaluation scores must come from actual test execution.
 """
 
-from typing import List, Set
+from typing import List
+
 from app.schemas.verification import (
     ClaimVerificationDetail,
     VerificationMetrics,
@@ -22,7 +23,7 @@ class VerificationMetricsCalculator:
         self,
         claims: List[ClaimVerificationDetail],
         verified_citations: List[str],
-        rejected_citations: List[str]
+        rejected_citations: List[str],
     ) -> VerificationMetrics:
         total_claims = len(claims)
         if total_claims == 0:
@@ -38,11 +39,21 @@ class VerificationMetricsCalculator:
                 unverified_count=0,
             )
 
-        supported_count = sum(1 for c in claims if c.verification_status == VerificationStatus.SUPPORTED)
-        partially_supported_count = sum(1 for c in claims if c.verification_status == VerificationStatus.PARTIALLY_SUPPORTED)
-        unsupported_count = sum(1 for c in claims if c.verification_status == VerificationStatus.UNSUPPORTED)
-        conflicting_count = sum(1 for c in claims if c.verification_status == VerificationStatus.CONFLICTING)
-        unverified_count = sum(1 for c in claims if c.verification_status == VerificationStatus.UNVERIFIED)
+        supported_count = sum(
+            1 for c in claims if c.verification_status == VerificationStatus.SUPPORTED
+        )
+        partially_supported_count = sum(
+            1 for c in claims if c.verification_status == VerificationStatus.PARTIALLY_SUPPORTED
+        )
+        unsupported_count = sum(
+            1 for c in claims if c.verification_status == VerificationStatus.UNSUPPORTED
+        )
+        conflicting_count = sum(
+            1 for c in claims if c.verification_status == VerificationStatus.CONFLICTING
+        )
+        unverified_count = sum(
+            1 for c in claims if c.verification_status == VerificationStatus.UNVERIFIED
+        )
 
         # 1. Evidence Coverage: fraction of claims backed by verified evidence
         coverage = (supported_count + (0.5 * partially_supported_count)) / total_claims
@@ -58,7 +69,9 @@ class VerificationMetricsCalculator:
             citation_validity_rate = round(len(verified_citations) / total_cited, 4)
         else:
             # If no specific citations were named, base it on whether evidence was verified
-            citation_validity_rate = 1.0 if unsupported_count == 0 else round(supported_count / total_claims, 4)
+            citation_validity_rate = (
+                1.0 if unsupported_count == 0 else round(supported_count / total_claims, 4)
+            )
 
         return VerificationMetrics(
             evidence_coverage=evidence_coverage,

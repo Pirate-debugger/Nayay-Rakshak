@@ -20,10 +20,7 @@ INSECURE_DEV_SECRETS = {
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=True,
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore"
     )
 
     PROJECT_NAME: str = "Nyaya Rakshak - AI Legal Clarity, Verification & Action Navigator"
@@ -35,9 +32,13 @@ class Settings(BaseSettings):
 
     # Security & Auth
     # Notice: In non-production, a designated dev key is permitted. In production, validate_production_settings() enforces explicit, high-entropy configuration.
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "nyaya-rakshak-secure-dev-secret-key-min32chars-for-jwt-signing!")
+    SECRET_KEY: str = os.getenv(
+        "SECRET_KEY", "nyaya-rakshak-secure-dev-secret-key-min32chars-for-jwt-signing!"
+    )
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))  # 15 minutes for access tokens
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
+        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15")
+    )  # 15 minutes for access tokens
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))  # 7 days
     MAX_LOGIN_ATTEMPTS: int = int(os.getenv("MAX_LOGIN_ATTEMPTS", "5"))
     LOCKOUT_DURATION_MINUTES: int = int(os.getenv("LOCKOUT_DURATION_MINUTES", "15"))
@@ -90,7 +91,10 @@ class Settings(BaseSettings):
 
     # Demo & Sample Features Control
     ENABLE_DEMO_ACCOUNTS: bool = os.getenv("ENABLE_DEMO_ACCOUNTS", "false").lower() in ("true", "1")
-    ENABLE_SAMPLE_DOCUMENTS: bool = os.getenv("ENABLE_SAMPLE_DOCUMENTS", "true").lower() in ("true", "1")
+    ENABLE_SAMPLE_DOCUMENTS: bool = os.getenv("ENABLE_SAMPLE_DOCUMENTS", "true").lower() in (
+        "true",
+        "1",
+    )
 
     # CORS
     CORS_ORIGINS: List[str] = [

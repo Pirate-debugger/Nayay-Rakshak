@@ -7,6 +7,7 @@ class BaseTaxonomyPlugin(ABC):
     Abstract base plugin for domain-specific clause taxonomy.
     New legal domains can be dynamically registered into NYAYA RAKSHAK.
     """
+
     @property
     @abstractmethod
     def category_id(self) -> str:
@@ -28,7 +29,9 @@ class BaseTaxonomyPlugin(ABC):
         pass
 
     @abstractmethod
-    def evaluate_covenant_risk(self, clause_text: str, deterministic_facts: Dict[str, Any]) -> Tuple[str, bool, Optional[str], Optional[str]]:
+    def evaluate_covenant_risk(
+        self, clause_text: str, deterministic_facts: Dict[str, Any]
+    ) -> Tuple[str, bool, Optional[str], Optional[str]]:
         """
         Evaluate risk level and statutory violation based on clause text and deterministic facts.
         Returns: (risk_level, is_unfair, statutory_ref, explanation)
@@ -52,11 +55,25 @@ class RentalLeaseTaxonomyPlugin(BaseTaxonomyPlugin):
     @property
     def keywords(self) -> List[str]:
         return [
-            "rent", "lease", "tenancy", "landlord", "tenant", "security deposit", "premises",
-            "eviction", "lock-in", "maintenance", "sub-letting", "painting", "fixture", "peaceful possession"
+            "rent",
+            "lease",
+            "tenancy",
+            "landlord",
+            "tenant",
+            "security deposit",
+            "premises",
+            "eviction",
+            "lock-in",
+            "maintenance",
+            "sub-letting",
+            "painting",
+            "fixture",
+            "peaceful possession",
         ]
 
-    def evaluate_covenant_risk(self, clause_text: str, deterministic_facts: Dict[str, Any]) -> Tuple[str, bool, Optional[str], Optional[str]]:
+    def evaluate_covenant_risk(
+        self, clause_text: str, deterministic_facts: Dict[str, Any]
+    ) -> Tuple[str, bool, Optional[str], Optional[str]]:
         lower = clause_text.lower()
         # 18%+ compounding interest check
         percentages = deterministic_facts.get("percentages", [])
@@ -66,7 +83,7 @@ class RentalLeaseTaxonomyPlugin(BaseTaxonomyPlugin):
                 "CRITICAL",
                 True,
                 "Model Tenancy Act § 21 / Consumer Protection Act § 2(46)",
-                "Compounding late fee at or exceeding 18% p.a. is punitive and unconscionable."
+                "Compounding late fee at or exceeding 18% p.a. is punitive and unconscionable.",
             )
         # Forfeiture of deposit without damages check
         if "forfeit the entire deposit" in lower or "non-refundable deposit" in lower:
@@ -74,7 +91,7 @@ class RentalLeaseTaxonomyPlugin(BaseTaxonomyPlugin):
                 "HIGH",
                 True,
                 "Indian Contract Act, 1872 § 74",
-                "Blanket forfeiture of entire security deposit without proof of actual damage is void under Section 74."
+                "Blanket forfeiture of entire security deposit without proof of actual damage is void under Section 74.",
             )
         # Entry without notice
         if "without prior notice" in lower and ("enter" in lower or "inspect" in lower):
@@ -82,7 +99,7 @@ class RentalLeaseTaxonomyPlugin(BaseTaxonomyPlugin):
                 "MEDIUM",
                 True,
                 "Model Tenancy Act § 15",
-                "Landlord entry into premises requires minimum 24-hour advance notice."
+                "Landlord entry into premises requires minimum 24-hour advance notice.",
             )
         return ("LOW", False, None, None)
 
@@ -103,22 +120,40 @@ class EmploymentTaxonomyPlugin(BaseTaxonomyPlugin):
     @property
     def keywords(self) -> List[str]:
         return [
-            "employment", "employee", "employer", "salary", "stipend", "probation", "notice period",
-            "non-compete", "non-solicitation", "garden leave", "intellectual property", "inventions",
-            "termination for cause", "severance"
+            "employment",
+            "employee",
+            "employer",
+            "salary",
+            "stipend",
+            "probation",
+            "notice period",
+            "non-compete",
+            "non-solicitation",
+            "garden leave",
+            "intellectual property",
+            "inventions",
+            "termination for cause",
+            "severance",
         ]
 
-    def evaluate_covenant_risk(self, clause_text: str, deterministic_facts: Dict[str, Any]) -> Tuple[str, bool, Optional[str], Optional[str]]:
+    def evaluate_covenant_risk(
+        self, clause_text: str, deterministic_facts: Dict[str, Any]
+    ) -> Tuple[str, bool, Optional[str], Optional[str]]:
         lower = clause_text.lower()
         # Post-employment non-compete check
-        if ("non-compete" in lower or "competing business" in lower or "restraint of trade" in lower) and (
-            "post-termination" in lower or "after cessation" in lower or "after leaving" in lower or "for a period of" in lower
+        if (
+            "non-compete" in lower or "competing business" in lower or "restraint of trade" in lower
+        ) and (
+            "post-termination" in lower
+            or "after cessation" in lower
+            or "after leaving" in lower
+            or "for a period of" in lower
         ):
             return (
                 "CRITICAL",
                 True,
                 "Indian Contract Act, 1872 § 27",
-                "Post-employment non-compete restrictions are void under Section 27 (Niranjan Shankar Golikari v. Century Spg)."
+                "Post-employment non-compete restrictions are void under Section 27 (Niranjan Shankar Golikari v. Century Spg).",
             )
         # Asymmetric notice period (e.g. employee 90 days, employer 0 days)
         if "immediate termination without notice" in lower and "employer may" in lower:
@@ -126,7 +161,7 @@ class EmploymentTaxonomyPlugin(BaseTaxonomyPlugin):
                 "HIGH",
                 True,
                 "Industrial Employment Act / Standard Labor Law",
-                "Unilateral employer termination without cause or notice creates severe employment vulnerability."
+                "Unilateral employer termination without cause or notice creates severe employment vulnerability.",
             )
         return ("LOW", False, None, None)
 
@@ -147,25 +182,34 @@ class NDATaxonomyPlugin(BaseTaxonomyPlugin):
     @property
     def keywords(self) -> List[str]:
         return [
-            "confidential", "proprietary", "disclosing party", "receiving party", "trade secret",
-            "non-disclosure", "injunction", "return of materials", "destruction certificate"
+            "confidential",
+            "proprietary",
+            "disclosing party",
+            "receiving party",
+            "trade secret",
+            "non-disclosure",
+            "injunction",
+            "return of materials",
+            "destruction certificate",
         ]
 
-    def evaluate_covenant_risk(self, clause_text: str, deterministic_facts: Dict[str, Any]) -> Tuple[str, bool, Optional[str], Optional[str]]:
+    def evaluate_covenant_risk(
+        self, clause_text: str, deterministic_facts: Dict[str, Any]
+    ) -> Tuple[str, bool, Optional[str], Optional[str]]:
         lower = clause_text.lower()
         if "perpetual confidentiality" in lower or "in perpetuity" in lower:
             return (
                 "MEDIUM",
                 False,
                 "Standard Commercial Practice",
-                "Perpetual confidentiality obligation on commercial data (outside trade secrets) creates indefinite liability."
+                "Perpetual confidentiality obligation on commercial data (outside trade secrets) creates indefinite liability.",
             )
         if "without exception" in lower and "required by law" not in lower:
             return (
                 "HIGH",
                 True,
                 "BNSS 2023 / Code of Civil Procedure",
-                "NDA cannot prohibit compliance with lawful court orders or statutory investigative summons."
+                "NDA cannot prohibit compliance with lawful court orders or statutory investigative summons.",
             )
         return ("LOW", False, None, None)
 
@@ -186,18 +230,30 @@ class ConsumerAgreementTaxonomyPlugin(BaseTaxonomyPlugin):
     @property
     def keywords(self) -> List[str]:
         return [
-            "consumer", "warranty", "refund", "return", "cancellation", "as is", "no liability",
-            "goods", "services", "defect", "unfair trade", "e-daakhil"
+            "consumer",
+            "warranty",
+            "refund",
+            "return",
+            "cancellation",
+            "as is",
+            "no liability",
+            "goods",
+            "services",
+            "defect",
+            "unfair trade",
+            "e-daakhil",
         ]
 
-    def evaluate_covenant_risk(self, clause_text: str, deterministic_facts: Dict[str, Any]) -> Tuple[str, bool, Optional[str], Optional[str]]:
+    def evaluate_covenant_risk(
+        self, clause_text: str, deterministic_facts: Dict[str, Any]
+    ) -> Tuple[str, bool, Optional[str], Optional[str]]:
         lower = clause_text.lower()
         if "no refund under any circumstances" in lower or "as is without any warranty" in lower:
             return (
                 "HIGH",
                 True,
                 "Consumer Protection Act, 2019 § 2(46)",
-                "Exclusion of all statutory consumer remedies constitutes an unfair contract term under § 2(46)."
+                "Exclusion of all statutory consumer remedies constitutes an unfair contract term under § 2(46).",
             )
         return ("LOW", False, None, None)
 
@@ -218,18 +274,29 @@ class ServiceAgreementTaxonomyPlugin(BaseTaxonomyPlugin):
     @property
     def keywords(self) -> List[str]:
         return [
-            "service provider", "client", "deliverables", "sla", "milestone", "acceptance criteria",
-            "indemnification", "limitation of liability", "independent contractor"
+            "service provider",
+            "client",
+            "deliverables",
+            "sla",
+            "milestone",
+            "acceptance criteria",
+            "indemnification",
+            "limitation of liability",
+            "independent contractor",
         ]
 
-    def evaluate_covenant_risk(self, clause_text: str, deterministic_facts: Dict[str, Any]) -> Tuple[str, bool, Optional[str], Optional[str]]:
+    def evaluate_covenant_risk(
+        self, clause_text: str, deterministic_facts: Dict[str, Any]
+    ) -> Tuple[str, bool, Optional[str], Optional[str]]:
         lower = clause_text.lower()
-        if "unlimited liability" in lower or ("indemnify" in lower and "consequential damages" in lower):
+        if "unlimited liability" in lower or (
+            "indemnify" in lower and "consequential damages" in lower
+        ):
             return (
                 "HIGH",
                 False,
                 "Indian Contract Act, 1872 § 73",
-                "Uncapped indemnity covering indirect or consequential damages violates standard limitation of liability limits."
+                "Uncapped indemnity covering indirect or consequential damages violates standard limitation of liability limits.",
             )
         return ("LOW", False, None, None)
 
@@ -250,18 +317,31 @@ class LoanFinanceTaxonomyPlugin(BaseTaxonomyPlugin):
     @property
     def keywords(self) -> List[str]:
         return [
-            "borrower", "lender", "loan", "principal", "interest", "emi", "prepayment", "foreclosure",
-            "collateral", "hypothecation", "default", "accelerate", "sarfaesi"
+            "borrower",
+            "lender",
+            "loan",
+            "principal",
+            "interest",
+            "emi",
+            "prepayment",
+            "foreclosure",
+            "collateral",
+            "hypothecation",
+            "default",
+            "accelerate",
+            "sarfaesi",
         ]
 
-    def evaluate_covenant_risk(self, clause_text: str, deterministic_facts: Dict[str, Any]) -> Tuple[str, bool, Optional[str], Optional[str]]:
+    def evaluate_covenant_risk(
+        self, clause_text: str, deterministic_facts: Dict[str, Any]
+    ) -> Tuple[str, bool, Optional[str], Optional[str]]:
         lower = clause_text.lower()
         if "prepayment penalty" in lower or "foreclosure charges on floating rate" in lower:
             return (
                 "HIGH",
                 True,
                 "RBI Fair Practices Code (Circular DBR.No.Dir.BC.107/13.03.00/2014-15)",
-                "RBI prohibits foreclosure charges / pre-payment penalties on floating rate term loans to individual borrowers."
+                "RBI prohibits foreclosure charges / pre-payment penalties on floating rate term loans to individual borrowers.",
             )
         return ("LOW", False, None, None)
 
@@ -282,18 +362,32 @@ class PrivacyPolicyTaxonomyPlugin(BaseTaxonomyPlugin):
     @property
     def keywords(self) -> List[str]:
         return [
-            "personal data", "data fiduciary", "data principal", "consent", "cookies", "biometric",
-            "retention", "grievance officer", "dpdp", "data breach", "cross-border"
+            "personal data",
+            "data fiduciary",
+            "data principal",
+            "consent",
+            "cookies",
+            "biometric",
+            "retention",
+            "grievance officer",
+            "dpdp",
+            "data breach",
+            "cross-border",
         ]
 
-    def evaluate_covenant_risk(self, clause_text: str, deterministic_facts: Dict[str, Any]) -> Tuple[str, bool, Optional[str], Optional[str]]:
+    def evaluate_covenant_risk(
+        self, clause_text: str, deterministic_facts: Dict[str, Any]
+    ) -> Tuple[str, bool, Optional[str], Optional[str]]:
         lower = clause_text.lower()
-        if "unconditional right to sell data" in lower or "share with third parties without consent" in lower:
+        if (
+            "unconditional right to sell data" in lower
+            or "share with third parties without consent" in lower
+        ):
             return (
                 "CRITICAL",
                 True,
                 "Digital Personal Data Protection Act, 2023 § 6",
-                "Unconsented sharing or commercial sale of personal data violates DPDP Act § 6 purpose limitation."
+                "Unconsented sharing or commercial sale of personal data violates DPDP Act § 6 purpose limitation.",
             )
         return ("LOW", False, None, None)
 
@@ -314,18 +408,27 @@ class TermsAndConditionsTaxonomyPlugin(BaseTaxonomyPlugin):
     @property
     def keywords(self) -> List[str]:
         return [
-            "terms of service", "terms of use", "user account", "suspension", "governing law",
-            "arbitration", "jurisdiction", "unilateral modification", "class action"
+            "terms of service",
+            "terms of use",
+            "user account",
+            "suspension",
+            "governing law",
+            "arbitration",
+            "jurisdiction",
+            "unilateral modification",
+            "class action",
         ]
 
-    def evaluate_covenant_risk(self, clause_text: str, deterministic_facts: Dict[str, Any]) -> Tuple[str, bool, Optional[str], Optional[str]]:
+    def evaluate_covenant_risk(
+        self, clause_text: str, deterministic_facts: Dict[str, Any]
+    ) -> Tuple[str, bool, Optional[str], Optional[str]]:
         lower = clause_text.lower()
         if "modify terms at any time without notice" in lower:
             return (
                 "MEDIUM",
                 True,
                 "Consumer Protection Act, 2019 § 2(46)",
-                "Unilateral right to alter essential contract terms without notice creates unfair contractual terms."
+                "Unilateral right to alter essential contract terms without notice creates unfair contractual terms.",
             )
         return ("LOW", False, None, None)
 
@@ -335,6 +438,7 @@ class TaxonomyRegistry:
     Extensible plugin registry for clause intelligence taxonomies.
     Allows easy dynamic registration of new domain categories.
     """
+
     def __init__(self):
         self._plugins: Dict[str, BaseTaxonomyPlugin] = {}
         # Register core 8 taxonomies

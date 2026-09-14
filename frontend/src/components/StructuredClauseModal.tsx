@@ -36,6 +36,50 @@ export default function StructuredClauseModal({
 }: Props) {
   const [activeTab, setActiveTab] = useState<'structured' | 'deterministic' | 'json'>('structured');
   const [copied, setCopied] = useState(false);
+  const modalRef = React.useRef<HTMLDivElement>(null);
+  const closeButtonRef = React.useRef<HTMLButtonElement>(null);
+  const triggerRef = React.useRef<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      triggerRef.current = document.activeElement as HTMLElement;
+      // Focus close button on open
+      const timer = setTimeout(() => closeButtonRef.current?.focus(), 50);
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          onClose();
+          return;
+        }
+
+        if (e.key === 'Tab' && modalRef.current) {
+          const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusableElements.length === 0) return;
+
+          const first = focusableElements[0];
+          const last = focusableElements[focusableElements.length - 1];
+
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('keydown', handleKeyDown);
+        triggerRef.current?.focus();
+      };
+    }
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -50,6 +94,7 @@ export default function StructuredClauseModal({
 
   return (
     <div
+      ref={modalRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto"
       role="dialog"
       aria-modal="true"
@@ -60,7 +105,7 @@ export default function StructuredClauseModal({
         <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-              <Cpu className="w-5 h-5" />
+              <Cpu className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -81,21 +126,24 @@ export default function StructuredClauseModal({
           </div>
 
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            aria-label="Close modal"
+            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition focus-visible:ring-2 focus-visible:ring-amber-400"
+            aria-label={lang === 'hi' ? 'मोडल बंद करें (Esc)' : 'Close modal (Esc)'}
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
         {/* Immutability & Confidence Bar */}
         <div className="px-5 py-2.5 bg-slate-950 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 text-emerald-400">
-            <Lock className="w-4 h-4" />
+            <Lock className="w-4 h-4" aria-hidden="true" />
             <span className="font-medium">
-              Deterministic Immutability: AI Silently Overwriting Facts is Strictly Blocked
+              {lang === 'hi'
+                ? 'अपरिवर्तनीय तथ्य सुरक्षा: AI तथ्यों को बदल नहीं सकता'
+                : 'Deterministic Immutability: AI Silently Overwriting Facts is Strictly Blocked'}
             </span>
           </div>
 
@@ -110,49 +158,72 @@ export default function StructuredClauseModal({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-slate-800 px-5 pt-2 bg-slate-900/90 gap-4 text-xs font-medium">
+        <div
+          role="tablist"
+          aria-label={lang === 'hi' ? 'धारा विश्लेषण टैब' : 'Clause analysis tabs'}
+          className="flex border-b border-slate-800 px-5 pt-2 bg-slate-900/90 gap-4 text-xs font-medium"
+        >
           <button
+            role="tab"
+            aria-selected={activeTab === 'structured'}
             type="button"
             onClick={() => setActiveTab('structured')}
-            className={`pb-2.5 border-b-2 transition flex items-center gap-1.5 ${
+            className={`pb-2.5 border-b-2 transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-amber-400 ${
               activeTab === 'structured'
                 ? 'border-amber-400 text-amber-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
-            <Scale className="w-4 h-4" />
-            <span>Semantic Interpretation</span>
+            <Scale className="w-4 h-4" aria-hidden="true" />
+            <span>{lang === 'hi' ? 'अर्थ और व्याख्या' : 'Semantic Interpretation'}</span>
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeTab === 'deterministic'}
             type="button"
             onClick={() => setActiveTab('deterministic')}
-            className={`pb-2.5 border-b-2 transition flex items-center gap-1.5 ${
+            className={`pb-2.5 border-b-2 transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-amber-400 ${
               activeTab === 'deterministic'
                 ? 'border-amber-400 text-amber-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
-            <Database className="w-4 h-4" />
-            <span>Deterministic Facts ({df.currencies.length + df.dates.length + df.durations.length + df.percentages.length})</span>
+            <Database className="w-4 h-4" aria-hidden="true" />
+            <span>
+              {lang === 'hi' ? 'तथ्य' : 'Deterministic Facts'} ({df.currencies.length + df.dates.length + df.durations.length + df.percentages.length})
+            </span>
           </button>
 
           <button
+            role="tab"
+            aria-selected={activeTab === 'json'}
             type="button"
             onClick={() => setActiveTab('json')}
-            className={`pb-2.5 border-b-2 transition flex items-center gap-1.5 ${
+            className={`pb-2.5 border-b-2 transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-amber-400 ${
               activeTab === 'json'
                 ? 'border-amber-400 text-amber-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
-            <FileCode className="w-4 h-4" />
-            <span>Structured JSON</span>
+            <FileCode className="w-4 h-4" aria-hidden="true" />
+            <span>{lang === 'hi' ? 'कच्चा JSON' : 'Structured JSON'}</span>
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-5 overflow-y-auto space-y-5 text-xs text-slate-300">
+        <div
+          role="tabpanel"
+          tabIndex={0}
+          aria-label={
+            activeTab === 'structured'
+              ? 'Semantic Interpretation Panel'
+              : activeTab === 'deterministic'
+              ? 'Deterministic Facts Panel'
+              : 'Structured JSON Panel'
+          }
+          className="p-5 overflow-y-auto space-y-5 text-xs text-slate-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500/50"
+        >
           {activeTab === 'structured' && (
             <div className="space-y-4">
               {/* Statutory Conflict Flag */}

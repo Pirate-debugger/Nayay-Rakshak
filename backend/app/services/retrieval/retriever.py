@@ -7,9 +7,9 @@ Orchestrates multi-source retrieval across:
 Enforces jurisdiction segregation, temporal validity, and explicit unretrieved evidence notices.
 """
 
-from datetime import datetime, timezone
 import hashlib
 import re
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from app.schemas.retrieval import (
@@ -30,12 +30,7 @@ from app.services.retrieval.reranker import tier_weighted_reranker
 class LegalRetriever:
     """Enterprise Legal Retrieval Orchestrator."""
 
-    def __init__(
-        self,
-        classifier=None,
-        authority_provider=None,
-        reranker=None
-    ):
+    def __init__(self, classifier=None, authority_provider=None, reranker=None):
         self.classifier = classifier or query_classifier
         self.authority_provider = authority_provider or legal_source_provider
         self.reranker = reranker or tier_weighted_reranker
@@ -45,7 +40,7 @@ class LegalRetriever:
         query: str,
         document_chunks: Optional[List[Dict[str, Any]]] = None,
         custom_filters: Optional[RetrievalFilter] = None,
-        top_k: int = 5
+        top_k: int = 5,
     ) -> RetrievalResponse:
         """
         Execute multi-stream evidence-first retrieval.
@@ -64,7 +59,7 @@ class LegalRetriever:
                 legal_domain=custom_filters.legal_domain or auto_filters.legal_domain,
                 as_of_date=custom_filters.as_of_date or auto_filters.as_of_date,
                 min_authority_tier=custom_filters.min_authority_tier,
-                allowed_statuses=custom_filters.allowed_statuses or auto_filters.allowed_statuses
+                allowed_statuses=custom_filters.allowed_statuses or auto_filters.allowed_statuses,
             )
 
         user_doc_items: List[RetrievalResultItem] = []
@@ -73,36 +68,42 @@ class LegalRetriever:
 
         # 2. STREAM A: User Document Evidence
         if auto_intent in [QueryIntent.DOCUMENT_ONLY, QueryIntent.HYBRID] and document_chunks:
-            user_doc_items = self._retrieve_user_document_evidence(query, document_chunks, top_k=top_k)
+            user_doc_items = self._retrieve_user_document_evidence(
+                query, document_chunks, top_k=top_k
+            )
 
         # 3. STREAM B: Legal Authority (Tier 1 & Tier 2)
-        if auto_intent in [QueryIntent.LEGAL_SOURCE, QueryIntent.HYBRID, QueryIntent.GENERAL_INFORMATION]:
+        if auto_intent in [
+            QueryIntent.LEGAL_SOURCE,
+            QueryIntent.HYBRID,
+            QueryIntent.GENERAL_INFORMATION,
+        ]:
             legal_authority_items = self.authority_provider.search_authorities(
-                query=query,
-                filters=filters,
-                top_k=top_k
+                query=query, filters=filters, top_k=top_k
             )
 
         # 4. STREAM C: Reputable Secondary Information (Tier 3 fallback)
-        if not legal_authority_items and auto_intent in [QueryIntent.LEGAL_SOURCE, QueryIntent.GENERAL_INFORMATION]:
+        if not legal_authority_items and auto_intent in [
+            QueryIntent.LEGAL_SOURCE,
+            QueryIntent.GENERAL_INFORMATION,
+        ]:
             secondary_items = self._retrieve_secondary_information(query, filters)
 
         # 5. Hybrid Reranking with Tier Weighting
         all_candidates = user_doc_items + legal_authority_items + secondary_items
         reranked = self.reranker.rerank(
-            keyword_results=all_candidates,
-            semantic_results=all_candidates,
-            top_k=top_k
+            keyword_results=all_candidates, semantic_results=all_candidates, top_k=top_k
         )
 
         # 6. Authoritative Evidence Assessment
         has_authoritative = any(
-            item.tier in [SourceTier.TIER_1_OFFICIAL_LEGISLATION_COURTS, SourceTier.TIER_2_OFFICIAL_INSTITUTIONS]
+            item.tier
+            in [
+                SourceTier.TIER_1_OFFICIAL_LEGISLATION_COURTS,
+                SourceTier.TIER_2_OFFICIAL_INSTITUTIONS,
+            ]
             for item in reranked
-        ) or any(
-            item.evidence_type == EvidenceType.USER_DOCUMENT_EVIDENCE
-            for item in reranked
-        )
+        ) or any(item.evidence_type == EvidenceType.USER_DOCUMENT_EVIDENCE for item in reranked)
 
         unretrieved_disclaimer = None
         if not has_authoritative:
@@ -121,17 +122,33 @@ class LegalRetriever:
             user_document_items=user_doc_items,
             legal_authority_items=legal_authority_items,
             secondary_items=secondary_items,
-            reranked_items=reranked
+            reranked_items=reranked,
         )
 
     def _retrieve_user_document_evidence(
-        self,
-        query: str,
-        chunks: List[Dict[str, Any]],
-        top_k: int = 5
+        self, query: str, chunks: List[Dict[str, Any]], top_k: int = 5
     ) -> List[RetrievalResultItem]:
         """Performs lexical and structural search over uploaded user document chunks."""
-        stop_words = {"what", "is", "the", "for", "in", "this", "how", "many", "does", "are", "and", "or", "of", "to", "a", "an", "with", "that"}
+        stop_words = {
+            "what",
+            "is",
+            "the",
+            "for",
+            "in",
+            "this",
+            "how",
+            "many",
+            "does",
+            "are",
+            "and",
+            "or",
+            "of",
+            "to",
+            "a",
+            "an",
+            "with",
+            "that",
+        }
         raw_tokens = [t.lower() for t in re.findall(r"\w+", query) if len(t) > 2]
         q_tokens = [t for t in raw_tokens if t not in stop_words] or raw_tokens
         scored_chunks = []
@@ -152,17 +169,25 @@ class LegalRetriever:
                     sec_matches += 1
 
             if text_matches > 0 or sec_matches > 0:
-                score = min(1.0, (text_matches / max(1, len(q_tokens))) * 0.85 + (sec_matches / max(1, len(q_tokens))) * 0.15)
-                item_id = f"USER-DOC-CHUNK-{idx+1:03d}"
+                score = min(
+                    1.0,
+                    (text_matches / max(1, len(q_tokens))) * 0.85
+                    + (sec_matches / max(1, len(q_tokens))) * 0.15,
+                )
+                item_id = f"USER-DOC-CHUNK-{idx + 1:03d}"
                 sha_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
                 # Find the sentence with the highest number of token matches
-                sentences = [s.strip() for s in re.split(r"(?<=[.!?\n])\s+", text) if len(s.strip()) > 10]
+                sentences = [
+                    s.strip() for s in re.split(r"(?<=[.!?\n])\s+", text) if len(s.strip()) > 10
+                ]
                 best_sentence = text[:300].strip()
                 max_sent_matches = -1
                 for s in sentences:
                     s_lower = s.lower()
-                    sent_matches = sum(1 for t in q_tokens if (t in s_lower or (len(t) > 5 and t[:5] in s_lower)))
+                    sent_matches = sum(
+                        1 for t in q_tokens if (t in s_lower or (len(t) > 5 and t[:5] in s_lower))
+                    )
                     if sent_matches > max_sent_matches:
                         max_sent_matches = sent_matches
                         best_sentence = s
@@ -180,7 +205,7 @@ class LegalRetriever:
                     url_or_reference="local://user_document",
                     supporting_text=best_sentence,
                     relevance_score=score,
-                    provenance={"chunk_index": idx, "sha256": sha_hash, "page": page_num}
+                    provenance={"chunk_index": idx, "sha256": sha_hash, "page": page_num},
                 )
 
                 item = RetrievalResultItem(
@@ -197,7 +222,7 @@ class LegalRetriever:
                     jurisdiction="Contractual Terms",
                     effective_from=None,
                     effective_to=None,
-                    status=SourceStatus.ACTIVE
+                    status=SourceStatus.ACTIVE,
                 )
                 scored_chunks.append(item)
 
@@ -205,9 +230,7 @@ class LegalRetriever:
         return scored_chunks[:top_k]
 
     def _retrieve_secondary_information(
-        self,
-        query: str,
-        filters: RetrievalFilter
+        self, query: str, filters: RetrievalFilter
     ) -> List[RetrievalResultItem]:
         """Provides verified secondary commentary when primary statute is broad or procedural."""
         items = []
@@ -231,24 +254,26 @@ class LegalRetriever:
                     "Fee is exempted for claims up to ₹5 Lakhs under CPA 2019 rules."
                 ),
                 relevance_score=0.75,
-                provenance={"source_type": "Government Citizen Portal"}
+                provenance={"source_type": "Government Citizen Portal"},
             )
-            items.append(RetrievalResultItem(
-                item_id=item_id,
-                evidence_type=EvidenceType.SECONDARY_INFORMATION,
-                tier=SourceTier.TIER_3_REPUTABLE_SECONDARY,
-                title="Citizen Guide: Consumer Complaint Procedure & e-Daakhil Portal",
-                content=citation.supporting_text,
-                citation=citation,
-                keyword_score=0.8,
-                semantic_score=0.0,
-                tier_boost=0.5,
-                final_score=0.4,
-                jurisdiction="Union of India",
-                effective_from="2022-01-01T00:00:00Z",
-                effective_to=None,
-                status=SourceStatus.ACTIVE
-            ))
+            items.append(
+                RetrievalResultItem(
+                    item_id=item_id,
+                    evidence_type=EvidenceType.SECONDARY_INFORMATION,
+                    tier=SourceTier.TIER_3_REPUTABLE_SECONDARY,
+                    title="Citizen Guide: Consumer Complaint Procedure & e-Daakhil Portal",
+                    content=citation.supporting_text,
+                    citation=citation,
+                    keyword_score=0.8,
+                    semantic_score=0.0,
+                    tier_boost=0.5,
+                    final_score=0.4,
+                    jurisdiction="Union of India",
+                    effective_from="2022-01-01T00:00:00Z",
+                    effective_to=None,
+                    status=SourceStatus.ACTIVE,
+                )
+            )
 
         return items
 

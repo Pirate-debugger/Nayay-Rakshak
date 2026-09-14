@@ -5,6 +5,7 @@ and IR benchmark evaluation.
 """
 
 from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
@@ -24,11 +25,10 @@ class RetrievalSearchRequest(BaseModel):
     query: str = Field(..., min_length=2, max_length=500, description="Legal question or query")
     document_chunks: Optional[List[Dict[str, Any]]] = Field(
         None,
-        description="Optional list of chunks from user document: [{'content': '...', 'page_number': 1}]"
+        description="Optional list of chunks from user document: [{'content': '...', 'page_number': 1}]",
     )
     custom_filters: Optional[RetrievalFilter] = Field(
-        None,
-        description="Optional explicit retrieval filters (jurisdiction, date, domain)"
+        None, description="Optional explicit retrieval filters (jurisdiction, date, domain)"
     )
     top_k: int = Field(5, ge=1, le=20, description="Max candidate items to return")
 
@@ -50,8 +50,7 @@ async def search_legal_evidence(req: RetrievalSearchRequest):
         return response
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Retrieval error: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Retrieval error: {str(e)}"
         )
 
 
@@ -64,19 +63,21 @@ async def evaluate_retrieval_quality(req: Optional[RetrievalEvaluationRequest] =
     try:
         benchmarks = req.test_queries if req and req.test_queries else STANDARD_LEGAL_BENCHMARKS
         k_values = req.k_values if req and req.k_values else [1, 3, 5]
-        metrics = await retrieval_evaluator.evaluate_benchmarks(benchmarks=benchmarks, k_values=k_values)
+        metrics = await retrieval_evaluator.evaluate_benchmarks(
+            benchmarks=benchmarks, k_values=k_values
+        )
         return metrics
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Evaluation execution failed: {str(e)}"
+            detail=f"Evaluation execution failed: {str(e)}",
         )
 
 
 @router.get("/sources")
 async def list_registered_authorities(
     domain: Optional[str] = Query(None, description="Filter by legal domain"),
-    jurisdiction: Optional[str] = Query(None, description="Filter by jurisdiction")
+    jurisdiction: Optional[str] = Query(None, description="Filter by jurisdiction"),
 ):
     """
     Lists verified canonical legal authorities in the SourceRegistry.
@@ -102,7 +103,7 @@ async def list_registered_authorities(
             "effective_to": s.effective_to,
             "status": s.status.value,
             "official_url": s.official_url,
-            "key_principles": s.key_principles
+            "key_principles": s.key_principles,
         }
         for s in sources
     ]
@@ -115,7 +116,7 @@ async def get_authority_by_id(source_id: str):
     if not item:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Legal source '{source_id}' not found in registry."
+            detail=f"Legal source '{source_id}' not found in registry.",
         )
     return {
         "source_id": item.source_id,
@@ -134,5 +135,5 @@ async def get_authority_by_id(source_id: str):
         "status": item.status.value,
         "official_url": item.official_url,
         "historical_reference": item.historical_reference,
-        "legal_domain": item.legal_domain
+        "legal_domain": item.legal_domain,
     }

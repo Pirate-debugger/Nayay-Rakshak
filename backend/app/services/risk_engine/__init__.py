@@ -16,9 +16,9 @@ from app.schemas.risk import (
 )
 from app.services.risk_engine.engine import RiskEngine, risk_engine
 from app.services.risk_engine.rules import (
+    RULESET_VERSION,
     BaseRiskRule,
     RiskRuleRegistry,
-    RULESET_VERSION,
     risk_rule_registry,
 )
 
@@ -39,4 +39,3 @@ __all__ = [
     "RuleChangelogEntry",
     "RuleVersionInfo",
 ]
-

@@ -14,8 +14,7 @@ router = APIRouter(prefix="/admin", tags=["Administration & Operations"])
 
 @router.get("/stats", response_model=Dict[str, Any])
 async def get_system_stats(
-    admin_user: User = Depends(require_admin),
-    db: AsyncSession = Depends(get_db)
+    admin_user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
 ):
     """
     Retrieve operational system metrics.
@@ -24,7 +23,11 @@ async def get_system_stats(
     total_users = len((await db.execute(select(User.id))).scalars().all())
     total_docs = len((await db.execute(select(Document.id))).scalars().all())
     total_jobs = len((await db.execute(select(ProcessingJob.id))).scalars().all())
-    failed_jobs = len((await db.execute(select(ProcessingJob.id).where(ProcessingJob.status == "FAILED"))).scalars().all())
+    failed_jobs = len(
+        (await db.execute(select(ProcessingJob.id).where(ProcessingJob.status == "FAILED")))
+        .scalars()
+        .all()
+    )
 
     return {
         "total_users": total_users,
@@ -32,7 +35,7 @@ async def get_system_stats(
         "total_processing_jobs": total_jobs,
         "failed_processing_jobs": failed_jobs,
         "operator_email": admin_user.email,
-        "operator_role": admin_user.role
+        "operator_role": admin_user.role,
     }
 
 
@@ -40,7 +43,7 @@ async def get_system_stats(
 async def list_security_events(
     operator: User = Depends(require_system_operator),
     limit: int = 50,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Inspect telemetry on security violations (BOLA attempts, prompt injections, rate limits).
@@ -58,7 +61,7 @@ async def list_security_events(
             "severity": e.severity,
             "ip_address": e.ip_address,
             "payload_sample": e.payload_sample,
-            "remediated": e.remediated
+            "remediated": e.remediated,
         }
         for e in events
     ]
@@ -66,9 +69,7 @@ async def list_security_events(
 
 @router.get("/audit-logs", response_model=List[Dict[str, Any]])
 async def list_audit_logs(
-    admin_user: User = Depends(require_admin),
-    limit: int = 50,
-    db: AsyncSession = Depends(get_db)
+    admin_user: User = Depends(require_admin), limit: int = 50, db: AsyncSession = Depends(get_db)
 ):
     """
     Inspect immutable system audit trail.
@@ -78,25 +79,23 @@ async def list_audit_logs(
     logs = (await db.execute(q)).scalars().all()
     return [
         {
-            "id": l.id,
-            "uuid": l.uuid,
-            "timestamp": l.timestamp.isoformat(),
-            "user_id": l.user_id,
-            "action": l.action,
-            "target_type": l.target_type,
-            "target_id": l.target_id,
-            "status": l.status,
-            "details_json": l.details_json
+            "id": entry.id,
+            "uuid": entry.uuid,
+            "timestamp": entry.timestamp.isoformat(),
+            "user_id": entry.user_id,
+            "action": entry.action,
+            "target_type": entry.target_type,
+            "target_id": entry.target_id,
+            "status": entry.status,
+            "details_json": entry.details_json,
         }
-        for l in logs
+        for entry in logs
     ]
 
 
 @router.post("/users/{user_id}/unlock", status_code=status.HTTP_200_OK)
 async def unlock_user_account(
-    user_id: int,
-    admin_user: User = Depends(require_admin),
-    db: AsyncSession = Depends(get_db)
+    user_id: int, admin_user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
 ):
     """
     Manually unlock an account locked by brute-force protection.
@@ -117,7 +116,7 @@ async def unlock_user_account(
         user_id=admin_user.id,
         target_type="User",
         target_id=target_user.id,
-        status="SUCCESS"
+        status="SUCCESS",
     )
 
     return {"message": f"User account {target_user.email} has been successfully unlocked."}

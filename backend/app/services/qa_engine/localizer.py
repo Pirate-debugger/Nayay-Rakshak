@@ -7,8 +7,9 @@ User-facing plain explanations, uncertainties, next steps, and questions are the
 Statutory section identifiers and case citations remain canonical to avoid legal drift.
 """
 
-from typing import Any, Dict, List, Optional
-from app.schemas.qa import QAEvidenceItem, StructuredAnswerSections
+from typing import Any, Dict
+
+from app.schemas.qa import StructuredAnswerSections
 
 
 class QALocalizer:
@@ -22,7 +23,7 @@ class QALocalizer:
         "important_uncertainty": "महत्वपूर्ण अनिश्चितताएं एवं गैर-मौजूद तथ्य",
         "potential_next_steps": "नागरिक के लिए संभावित अगले कदम",
         "questions_for_professional": "वकील या विधिक विशेषज्ञ से पूछने हेतु प्रश्न",
-        "legal_disclaimer": "कानूनी अस्वीकरण (Legal Disclaimer)"
+        "legal_disclaimer": "कानूनी अस्वीकरण (Legal Disclaimer)",
     }
 
     HINDI_DISCLAIMER = (
@@ -32,9 +33,7 @@ class QALocalizer:
     )
 
     def localize_sections(
-        self,
-        sections: StructuredAnswerSections,
-        target_language: str = "en"
+        self, sections: StructuredAnswerSections, target_language: str = "en"
     ) -> Dict[str, Any]:
         """
         Translates structured sections into Hindi while preserving exact statutory citations.
@@ -49,7 +48,7 @@ class QALocalizer:
                 "important_uncertainty": sections.important_uncertainty,
                 "potential_next_steps": sections.potential_next_steps,
                 "questions_for_professional": sections.questions_for_professional,
-                "legal_disclaimer": sections.legal_disclaimer
+                "legal_disclaimer": sections.legal_disclaimer,
             }
 
         # Localize to Hindi
@@ -58,17 +57,21 @@ class QALocalizer:
         legal_hi = self._translate_legal_info_to_hindi(sections.applicable_legal_information)
         uncertainty_hi = self._translate_uncertainty_to_hindi(sections.important_uncertainty)
         steps_hi = [self._translate_step_to_hindi(step) for step in sections.potential_next_steps]
-        questions_hi = [self._translate_question_to_hindi(q) for q in sections.questions_for_professional]
+        questions_hi = [
+            self._translate_question_to_hindi(q) for q in sections.questions_for_professional
+        ]
 
         return {
             "plain_language_answer": plain_hi,
             "what_the_document_says": doc_hi,
             "applicable_legal_information": legal_hi,
-            "evidence": [e.model_dump() for e in sections.evidence],  # Evidence quotes remain canonical
+            "evidence": [
+                e.model_dump() for e in sections.evidence
+            ],  # Evidence quotes remain canonical
             "important_uncertainty": uncertainty_hi,
             "potential_next_steps": steps_hi,
             "questions_for_professional": questions_hi,
-            "legal_disclaimer": self.HINDI_DISCLAIMER
+            "legal_disclaimer": self.HINDI_DISCLAIMER,
         }
 
     def _translate_plain_text_to_hindi(self, en_text: str) -> str:
@@ -87,7 +90,10 @@ class QALocalizer:
         return f"{prefix}यह प्रावधान लागू भारतीय विधियों और उपलब्ध दस्तावेजी साक्ष्यों के अनुसार विश्लेषित किया गया है।"
 
     def _translate_doc_findings_to_hindi(self, en_text: str) -> str:
-        if "no document was provided" in en_text.lower() or "no uploaded document" in en_text.lower():
+        if (
+            "no document was provided" in en_text.lower()
+            or "no uploaded document" in en_text.lower()
+        ):
             return "कोई विशिष्ट अनुबंध या दस्तावेज़ अपलोड नहीं किया गया है; उत्तर सामान्य भारतीय विधि पर आधारित है।"
         return f"आपके दस्तावेज़ के अनुसार: {en_text}"
 
@@ -103,7 +109,7 @@ class QALocalizer:
             "receipt": "सभी भुगतानों और रसीदों का लिखित प्रमाण सुरक्षित रखें।",
             "written notice": "विपक्षी पक्ष को औपचारिक लिखित नोटिस या ईमेल प्रेषित करें।",
             "legal aid": "मुफ्त विधिक सहायता हेतु निकटतम नालसा (NALSA) या डीएलएसए (DLSA) केंद्र से संपर्क करें।",
-            "advocate": "अपने क्षेत्र के योग्य अधिवक्ता से व्यक्तिगत परामर्श प्राप्त करें।"
+            "advocate": "अपने क्षेत्र के योग्य अधिवक्ता से व्यक्तिगत परामर्श प्राप्त करें।",
         }
         for k, v in step_map.items():
             if k in step.lower():
@@ -115,7 +121,7 @@ class QALocalizer:
             "valid": "क्या मेरे अनुबंध की यह शर्त न्यायालय में प्रवर्तनीय (enforceable) होगी?",
             "remedy": "मेरे मामले में तत्काल कानूनी उपचार क्या उपलब्ध हैं?",
             "notice": "क्या मुझे कानूनी नोटिस भेजने की आवश्यकता है?",
-            "jurisdiction": "क्या इस विवाद का निपटारा मेरे स्थानीय क्षेत्राधिकार में हो सकता है?"
+            "jurisdiction": "क्या इस विवाद का निपटारा मेरे स्थानीय क्षेत्राधिकार में हो सकता है?",
         }
         for k, v in q_map.items():
             if k in q.lower():

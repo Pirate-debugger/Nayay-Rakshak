@@ -5,8 +5,8 @@ All rules are versioned, documented, and auditable.
 DO NOT let the LLM alone determine risk.
 """
 
-from abc import ABC, abstractmethod
 import re
+from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
 from app.schemas.risk import (
@@ -19,12 +19,12 @@ from app.schemas.risk import (
     RuleVersionInfo,
 )
 
-
 RULESET_VERSION = "2024.1.0"
 
 
 class BaseRiskRule(ABC):
     """Abstract base class for all versioned deterministic risk rules."""
+
     rule_id: str
     version: str = RULESET_VERSION
     category: RiskCategory
@@ -41,7 +41,7 @@ class BaseRiskRule(ABC):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         """
         Evaluate a clause or document section.
@@ -58,7 +58,7 @@ class BaseRiskRule(ABC):
             title=self.title,
             description=self.description,
             statutory_reference=self.statutory_cross_reference,
-            changelog=self.changelog
+            changelog=self.changelog,
         )
 
 
@@ -66,19 +66,23 @@ class BaseRiskRule(ABC):
 # 1. LIABILITY RULES
 # =====================================================================
 
+
 class UnlimitedLiabilityRule(BaseRiskRule):
     """Detects absence of liability caps or explicit unlimited liability."""
+
     rule_id = "RULE-LIA-001"
     category = RiskCategory.LIABILITY
     default_severity = RiskSeverity.CRITICAL
     title = "Potential Concern: Unlimited or Uncapped Liability Exposure"
-    description = "Clause imposes unlimited liability or expressly disclaims any monetary cap on damages."
+    description = (
+        "Clause imposes unlimited liability or expressly disclaims any monetary cap on damages."
+    )
     statutory_cross_reference = "Indian Contract Act, 1872 § 73 (Remoteness of Damages)"
     changelog = [
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial versioned rule detecting uncapped liability and cap disclaimers."
+            description="Initial versioned rule detecting uncapped liability and cap disclaimers.",
         )
     ]
 
@@ -88,7 +92,7 @@ class UnlimitedLiabilityRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         patterns = [
@@ -109,7 +113,7 @@ class UnlimitedLiabilityRule(BaseRiskRule):
         if match:
             start_idx = match.start()
             end_idx = match.end()
-            snippet = text[max(0, start_idx - 30):min(len(text), end_idx + 80)].strip()
+            snippet = text[max(0, start_idx - 30) : min(len(text), end_idx + 80)].strip()
             return RiskRecord(
                 risk_id=f"RISK-{self.rule_id}",
                 category=self.category,
@@ -123,7 +127,7 @@ class UnlimitedLiabilityRule(BaseRiskRule):
                     section_heading=section_heading,
                     verbatim_quote=snippet,
                     char_start=start_idx,
-                    char_end=end_idx
+                    char_end=end_idx,
                 ),
                 affected_party="Signatory / Service Provider / Tenant",
                 confidence=0.98,
@@ -132,24 +136,27 @@ class UnlimitedLiabilityRule(BaseRiskRule):
                 rule_id=self.rule_id,
                 rule_version=self.version,
                 finding_type=FindingType.DETERMINISTIC_RULE,
-                statutory_cross_reference=self.statutory_cross_reference
+                statutory_cross_reference=self.statutory_cross_reference,
             )
         return None
 
 
 class GrossNegligenceWaiverRule(BaseRiskRule):
     """Detects broad liability waivers that purport to excuse gross negligence or willful default."""
+
     rule_id = "RULE-LIA-002"
     category = RiskCategory.LIABILITY
     default_severity = RiskSeverity.CRITICAL
     title = "Potential Concern: Waiver of Liability for Gross Negligence or Willful Misconduct"
     description = "Clause disclaims liability even for deliberate default, intentional misconduct, or gross negligence."
-    statutory_cross_reference = "Indian Contract Act, 1872 § 23 (Agreements Opposed to Public Policy)"
+    statutory_cross_reference = (
+        "Indian Contract Act, 1872 § 23 (Agreements Opposed to Public Policy)"
+    )
     changelog = [
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying waivers of gross negligence and public policy overreach."
+            description="Initial rule identifying waivers of gross negligence and public policy overreach.",
         )
     ]
 
@@ -159,7 +166,7 @@ class GrossNegligenceWaiverRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         patterns = [
@@ -176,7 +183,7 @@ class GrossNegligenceWaiverRule(BaseRiskRule):
                 break
 
         if match:
-            snippet = text[max(0, match.start() - 20):min(len(text), match.end() + 80)].strip()
+            snippet = text[max(0, match.start() - 20) : min(len(text), match.end() + 80)].strip()
             return RiskRecord(
                 risk_id=f"RISK-{self.rule_id}",
                 category=self.category,
@@ -190,7 +197,7 @@ class GrossNegligenceWaiverRule(BaseRiskRule):
                     section_heading=section_heading,
                     verbatim_quote=snippet,
                     char_start=match.start(),
-                    char_end=match.end()
+                    char_end=match.end(),
                 ),
                 affected_party="Citizen / Client / Tenant",
                 confidence=0.96,
@@ -199,7 +206,7 @@ class GrossNegligenceWaiverRule(BaseRiskRule):
                 rule_id=self.rule_id,
                 rule_version=self.version,
                 finding_type=FindingType.DETERMINISTIC_RULE,
-                statutory_cross_reference=self.statutory_cross_reference
+                statutory_cross_reference=self.statutory_cross_reference,
             )
         return None
 
@@ -208,8 +215,10 @@ class GrossNegligenceWaiverRule(BaseRiskRule):
 # 2. TIME / DEADLINE RULES
 # =====================================================================
 
+
 class ShortNoticePeriodRule(BaseRiskRule):
     """Detects unusually short notice periods (< 7 days or immediate without cure)."""
+
     rule_id = "RULE-TIM-001"
     category = RiskCategory.TIME_DEADLINE
     default_severity = RiskSeverity.HIGH
@@ -220,7 +229,7 @@ class ShortNoticePeriodRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying sub-7-day notice and immediate eviction triggers."
+            description="Initial rule identifying sub-7-day notice and immediate eviction triggers.",
         )
     ]
 
@@ -230,7 +239,7 @@ class ShortNoticePeriodRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         durations = deterministic_facts.get("durations", [])
@@ -239,7 +248,9 @@ class ShortNoticePeriodRule(BaseRiskRule):
 
         for d in durations:
             days = d.get("days_equivalent") or d.get("duration_days") or 0
-            if 0 < days < 7 and any(k in t_lower for k in ["notice", "terminate", "evict", "vacate", "cure"]):
+            if 0 < days < 7 and any(
+                k in t_lower for k in ["notice", "terminate", "evict", "vacate", "cure"]
+            ):
                 short_dur = True
                 matched_str = d.get("raw_text") or d.get("raw_match") or f"{days} days"
                 break
@@ -249,14 +260,14 @@ class ShortNoticePeriodRule(BaseRiskRule):
             r"(?:terminate|cancel|vacate)\s+(?:with\s+immediate\s+effect|on\s+immediate\s+notice)",
             r"(?:notice\s+of\s+less\s+than\s+7\s+days|[1-6]\s+days?\s+notice)",
             r"\b(?:24|48|72)\s+hours?\s+notice\b",
-            r"forthwith\s+without\s+(?:prior\s+)?(?:notice|intimation)"
+            r"forthwith\s+without\s+(?:prior\s+)?(?:notice|intimation)",
         ]
         match = None
         for p in patterns:
             m = re.search(p, t_lower)
             if m:
                 match = m
-                matched_str = text[m.start():m.end()]
+                matched_str = text[m.start() : m.end()]
                 break
 
         if short_dur or match:
@@ -274,7 +285,7 @@ class ShortNoticePeriodRule(BaseRiskRule):
                     section_heading=section_heading,
                     verbatim_quote=snippet,
                     char_start=0,
-                    char_end=len(snippet)
+                    char_end=len(snippet),
                 ),
                 affected_party="Tenant / Employee / Contractor",
                 confidence=0.96,
@@ -283,13 +294,14 @@ class ShortNoticePeriodRule(BaseRiskRule):
                 rule_id=self.rule_id,
                 rule_version=self.version,
                 finding_type=FindingType.DETERMINISTIC_RULE,
-                statutory_cross_reference=self.statutory_cross_reference
+                statutory_cross_reference=self.statutory_cross_reference,
             )
         return None
 
 
 class UnreasonableCurePeriodRule(BaseRiskRule):
     """Detects absence of cure period or unreasonable cure timeframe (< 7 days)."""
+
     rule_id = "RULE-TIM-002"
     category = RiskCategory.TIME_DEADLINE
     default_severity = RiskSeverity.MEDIUM
@@ -300,7 +312,7 @@ class UnreasonableCurePeriodRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule checking for absence or shortness of breach cure periods."
+            description="Initial rule checking for absence or shortness of breach cure periods.",
         )
     ]
 
@@ -310,7 +322,7 @@ class UnreasonableCurePeriodRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         patterns = [
@@ -321,7 +333,7 @@ class UnreasonableCurePeriodRule(BaseRiskRule):
         for p in patterns:
             m = re.search(p, t_lower)
             if m:
-                snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 80)].strip()
+                snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 80)].strip()
                 return RiskRecord(
                     risk_id=f"RISK-{self.rule_id}",
                     category=self.category,
@@ -335,7 +347,7 @@ class UnreasonableCurePeriodRule(BaseRiskRule):
                         section_heading=section_heading,
                         verbatim_quote=snippet,
                         char_start=m.start(),
-                        char_end=m.end()
+                        char_end=m.end(),
                     ),
                     affected_party="Signatory / Tenant / Service Provider",
                     confidence=0.91,
@@ -344,7 +356,7 @@ class UnreasonableCurePeriodRule(BaseRiskRule):
                     rule_id=self.rule_id,
                     rule_version=self.version,
                     finding_type=FindingType.DETERMINISTIC_RULE,
-                    statutory_cross_reference=self.statutory_cross_reference
+                    statutory_cross_reference=self.statutory_cross_reference,
                 )
         return None
 
@@ -353,8 +365,10 @@ class UnreasonableCurePeriodRule(BaseRiskRule):
 # 3. INDEMNITY RULES
 # =====================================================================
 
+
 class UncappedIndemnityRule(BaseRiskRule):
     """Detects broad or uncapped indemnification obligations."""
+
     rule_id = "RULE-IND-001"
     category = RiskCategory.INDEMNITY
     default_severity = RiskSeverity.HIGH
@@ -365,7 +379,7 @@ class UncappedIndemnityRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying broad or uncapped indemnification provisions."
+            description="Initial rule identifying broad or uncapped indemnification provisions.",
         )
     ]
 
@@ -375,7 +389,7 @@ class UncappedIndemnityRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         if "indemn" in t_lower:
@@ -390,7 +404,7 @@ class UncappedIndemnityRule(BaseRiskRule):
             for p in patterns:
                 m = re.search(p, t_lower)
                 if m:
-                    snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 80)].strip()
+                    snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 80)].strip()
                     return RiskRecord(
                         risk_id=f"RISK-{self.rule_id}",
                         category=self.category,
@@ -404,7 +418,7 @@ class UncappedIndemnityRule(BaseRiskRule):
                             section_heading=section_heading,
                             verbatim_quote=snippet,
                             char_start=m.start(),
-                            char_end=m.end()
+                            char_end=m.end(),
                         ),
                         affected_party="Indemnifying Party / Citizen",
                         confidence=0.94,
@@ -413,13 +427,14 @@ class UncappedIndemnityRule(BaseRiskRule):
                         rule_id=self.rule_id,
                         rule_version=self.version,
                         finding_type=FindingType.DETERMINISTIC_RULE,
-                        statutory_cross_reference=self.statutory_cross_reference
+                        statutory_cross_reference=self.statutory_cross_reference,
                     )
         return None
 
 
 class IndemnityForCounterpartyFaultRule(BaseRiskRule):
     """Detects clauses where a party indemnifies the counterparty for the counterparty's own negligence."""
+
     rule_id = "RULE-IND-002"
     category = RiskCategory.INDEMNITY
     default_severity = RiskSeverity.CRITICAL
@@ -430,7 +445,7 @@ class IndemnityForCounterpartyFaultRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying indemnity for counterparty's own fault."
+            description="Initial rule identifying indemnity for counterparty's own fault.",
         )
     ]
 
@@ -440,19 +455,19 @@ class IndemnityForCounterpartyFaultRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         if "indemn" in t_lower:
             patterns = [
                 r"indemnify.*regardless\s+of\s+(?:lessor|company|landlord)\s*(?:'s)?\s+(?:negligence|fault)",
                 r"indemnify.*whether\s+or\s+not\s+caused\s+by\s+(?:the\s+)?(?:lessor|company|landlord)",
-                r"indemnify.*even\s+if\s+arising\s+from.*acts\s+of\s+(?:the\s+)?(?:lessor|company|landlord)"
+                r"indemnify.*even\s+if\s+arising\s+from.*acts\s+of\s+(?:the\s+)?(?:lessor|company|landlord)",
             ]
             for p in patterns:
                 m = re.search(p, t_lower)
                 if m:
-                    snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 80)].strip()
+                    snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 80)].strip()
                     return RiskRecord(
                         risk_id=f"RISK-{self.rule_id}",
                         category=self.category,
@@ -466,7 +481,7 @@ class IndemnityForCounterpartyFaultRule(BaseRiskRule):
                             section_heading=section_heading,
                             verbatim_quote=snippet,
                             char_start=m.start(),
-                            char_end=m.end()
+                            char_end=m.end(),
                         ),
                         affected_party="Indemnifying Party / Tenant",
                         confidence=0.97,
@@ -475,7 +490,7 @@ class IndemnityForCounterpartyFaultRule(BaseRiskRule):
                         rule_id=self.rule_id,
                         rule_version=self.version,
                         finding_type=FindingType.DETERMINISTIC_RULE,
-                        statutory_cross_reference=self.statutory_cross_reference
+                        statutory_cross_reference=self.statutory_cross_reference,
                     )
         return None
 
@@ -484,8 +499,10 @@ class IndemnityForCounterpartyFaultRule(BaseRiskRule):
 # 4. RENEWAL RULES
 # =====================================================================
 
+
 class AutomaticRenewalRule(BaseRiskRule):
     """Detects automatic evergreen renewal with restrictive opt-out provisions."""
+
     rule_id = "RULE-REN-001"
     category = RiskCategory.RENEWAL
     default_severity = RiskSeverity.MEDIUM
@@ -496,7 +513,7 @@ class AutomaticRenewalRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying evergreen renewal clauses."
+            description="Initial rule identifying evergreen renewal clauses.",
         )
     ]
 
@@ -506,19 +523,19 @@ class AutomaticRenewalRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         patterns = [
             r"automatic(?:ally)?\s+renew(?:al|s|ed)?",
             r"shall\s+renew\s+automatically",
             r"deemed\s+renewed",
-            r"evergreen\s+(?:clause|provision|term)"
+            r"evergreen\s+(?:clause|provision|term)",
         ]
         for p in patterns:
             m = re.search(p, t_lower)
             if m:
-                snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 100)].strip()
+                snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 100)].strip()
                 return RiskRecord(
                     risk_id=f"RISK-{self.rule_id}",
                     category=self.category,
@@ -532,7 +549,7 @@ class AutomaticRenewalRule(BaseRiskRule):
                         section_heading=section_heading,
                         verbatim_quote=snippet,
                         char_start=m.start(),
-                        char_end=m.end()
+                        char_end=m.end(),
                     ),
                     affected_party="Consumer / Tenant / Client",
                     confidence=0.92,
@@ -541,7 +558,7 @@ class AutomaticRenewalRule(BaseRiskRule):
                     rule_id=self.rule_id,
                     rule_version=self.version,
                     finding_type=FindingType.DETERMINISTIC_RULE,
-                    statutory_cross_reference=self.statutory_cross_reference
+                    statutory_cross_reference=self.statutory_cross_reference,
                 )
         return None
 
@@ -550,19 +567,23 @@ class AutomaticRenewalRule(BaseRiskRule):
 # 5. OBLIGATION ASYMMETRY RULES
 # =====================================================================
 
+
 class UnilateralAmendmentRule(BaseRiskRule):
     """Detects unilateral amendment rights without requirement of mutual consent."""
+
     rule_id = "RULE-ASY-001"
     category = RiskCategory.OBLIGATION_ASYMMETRY
     default_severity = RiskSeverity.HIGH
     title = "Potential Concern: Unilateral Right to Amend Contract Terms"
     description = "Permits one party to modify terms, rates, or obligations unilaterally without prior approval."
-    statutory_cross_reference = "Consumer Protection Act, 2019 § 2(46)(v) (Unilateral alteration of terms)"
+    statutory_cross_reference = (
+        "Consumer Protection Act, 2019 § 2(46)(v) (Unilateral alteration of terms)"
+    )
     changelog = [
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying unilateral amendment rights."
+            description="Initial rule identifying unilateral amendment rights.",
         )
     ]
 
@@ -572,7 +593,7 @@ class UnilateralAmendmentRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         patterns = [
@@ -585,7 +606,7 @@ class UnilateralAmendmentRule(BaseRiskRule):
         for p in patterns:
             m = re.search(p, t_lower)
             if m:
-                snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 80)].strip()
+                snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 80)].strip()
                 return RiskRecord(
                     risk_id=f"RISK-{self.rule_id}",
                     category=self.category,
@@ -599,7 +620,7 @@ class UnilateralAmendmentRule(BaseRiskRule):
                         section_heading=section_heading,
                         verbatim_quote=snippet,
                         char_start=m.start(),
-                        char_end=m.end()
+                        char_end=m.end(),
                     ),
                     affected_party="Consumer / Tenant / User",
                     confidence=0.97,
@@ -608,13 +629,14 @@ class UnilateralAmendmentRule(BaseRiskRule):
                     rule_id=self.rule_id,
                     rule_version=self.version,
                     finding_type=FindingType.DETERMINISTIC_RULE,
-                    statutory_cross_reference=self.statutory_cross_reference
+                    statutory_cross_reference=self.statutory_cross_reference,
                 )
         return None
 
 
 class AsymmetricTerminationRule(BaseRiskRule):
     """Detects where one party has broad exit rights while counterparty is strictly locked in."""
+
     rule_id = "RULE-ASY-002"
     category = RiskCategory.OBLIGATION_ASYMMETRY
     default_severity = RiskSeverity.HIGH
@@ -625,7 +647,7 @@ class AsymmetricTerminationRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying one-sided termination privileges."
+            description="Initial rule identifying one-sided termination privileges.",
         )
     ]
 
@@ -635,7 +657,7 @@ class AsymmetricTerminationRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         patterns = [
@@ -646,7 +668,7 @@ class AsymmetricTerminationRule(BaseRiskRule):
         for p in patterns:
             m = re.search(p, t_lower)
             if m:
-                snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 80)].strip()
+                snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 80)].strip()
                 return RiskRecord(
                     risk_id=f"RISK-{self.rule_id}",
                     category=self.category,
@@ -660,7 +682,7 @@ class AsymmetricTerminationRule(BaseRiskRule):
                         section_heading=section_heading,
                         verbatim_quote=snippet,
                         char_start=m.start(),
-                        char_end=m.end()
+                        char_end=m.end(),
                     ),
                     affected_party="Tenant / Consumer / Employee",
                     confidence=0.96,
@@ -669,7 +691,7 @@ class AsymmetricTerminationRule(BaseRiskRule):
                     rule_id=self.rule_id,
                     rule_version=self.version,
                     finding_type=FindingType.DETERMINISTIC_RULE,
-                    statutory_cross_reference=self.statutory_cross_reference
+                    statutory_cross_reference=self.statutory_cross_reference,
                 )
         return None
 
@@ -678,19 +700,23 @@ class AsymmetricTerminationRule(BaseRiskRule):
 # 6. FINANCIAL RULES
 # =====================================================================
 
+
 class MaterialFinancialPenaltyRule(BaseRiskRule):
     """Detects excessive late fees, interest >= 18% p.a., or daily flat fines."""
+
     rule_id = "RULE-FIN-001"
     category = RiskCategory.FINANCIAL
     default_severity = RiskSeverity.CRITICAL
     title = "Potential Concern: Exorbitant Financial Penalty or Interest Rate"
     description = "Imposes penal interest exceeding 18% per annum, compounding daily fines, or disproportionate forfeitures."
-    statutory_cross_reference = "Indian Contract Act, 1872 § 74 (Compensation for Breach where Penalty Stipulated)"
+    statutory_cross_reference = (
+        "Indian Contract Act, 1872 § 74 (Compensation for Breach where Penalty Stipulated)"
+    )
     changelog = [
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying penal interest rates and excessive daily compounding fines."
+            description="Initial rule identifying penal interest rates and excessive daily compounding fines.",
         )
     ]
 
@@ -700,7 +726,7 @@ class MaterialFinancialPenaltyRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         percentages = deterministic_facts.get("percentages", [])
@@ -709,7 +735,9 @@ class MaterialFinancialPenaltyRule(BaseRiskRule):
 
         for p in percentages:
             val = p.get("value") or p.get("value_percent") or 0.0
-            if val >= 18.0 and any(k in t_lower for k in ["interest", "penalty", "late", "default", "delay"]):
+            if val >= 18.0 and any(
+                k in t_lower for k in ["interest", "penalty", "late", "default", "delay"]
+            ):
                 high_pct = True
                 pct_val = val
                 break
@@ -719,7 +747,7 @@ class MaterialFinancialPenaltyRule(BaseRiskRule):
             r"(?:₹|rs\.?|inr)\s*(?:[5-9][0-9]{2}|[1-9][0-9]{3,})\s*(?:per|each)\s+day",
             r"daily\s+(?:compounding\s+)?penalty\s+of",
             r"forfeiture\s+of\s+(?:entire|all)\s+security\s+deposit",
-            r"entire\s+security\s+deposit\s+shall\s+stand\s+(?:unconditionally\s+)?forfeited"
+            r"entire\s+security\s+deposit\s+shall\s+stand\s+(?:unconditionally\s+)?forfeited",
         ]
         match = None
         for p in patterns:
@@ -743,7 +771,7 @@ class MaterialFinancialPenaltyRule(BaseRiskRule):
                     section_heading=section_heading,
                     verbatim_quote=snippet,
                     char_start=0,
-                    char_end=len(snippet)
+                    char_end=len(snippet),
                 ),
                 affected_party="Borrower / Tenant / Payer",
                 confidence=0.98,
@@ -752,24 +780,27 @@ class MaterialFinancialPenaltyRule(BaseRiskRule):
                 rule_id=self.rule_id,
                 rule_version=self.version,
                 finding_type=FindingType.DETERMINISTIC_RULE,
-                statutory_cross_reference=self.statutory_cross_reference
+                statutory_cross_reference=self.statutory_cross_reference,
             )
         return None
 
 
 class ExcessiveSecurityDepositRule(BaseRiskRule):
     """Detects security deposits exceeding 2 months rent or 90-day delayed return."""
+
     rule_id = "RULE-FIN-002"
     category = RiskCategory.FINANCIAL
     default_severity = RiskSeverity.HIGH
     title = "Potential Concern: Excessive Security Deposit or Delayed Refund"
     description = "Deposit exceeds customary limits (2 months under Model Tenancy Act) or allows refund delays exceeding 30 days."
-    statutory_cross_reference = "Model Tenancy Act, 2021 § 21 (Security Deposit Cap & Refund Timeline)"
+    statutory_cross_reference = (
+        "Model Tenancy Act, 2021 § 21 (Security Deposit Cap & Refund Timeline)"
+    )
     changelog = [
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying excessive security deposits and delayed refund windows."
+            description="Initial rule identifying excessive security deposits and delayed refund windows.",
         )
     ]
 
@@ -779,7 +810,7 @@ class ExcessiveSecurityDepositRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         if any(k in t_lower for k in ["security deposit", "caution deposit"]):
@@ -793,7 +824,7 @@ class ExcessiveSecurityDepositRule(BaseRiskRule):
             for p in patterns:
                 m = re.search(p, t_lower)
                 if m:
-                    snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 80)].strip()
+                    snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 80)].strip()
                     return RiskRecord(
                         risk_id=f"RISK-{self.rule_id}",
                         category=self.category,
@@ -807,7 +838,7 @@ class ExcessiveSecurityDepositRule(BaseRiskRule):
                             section_heading=section_heading,
                             verbatim_quote=snippet,
                             char_start=m.start(),
-                            char_end=m.end()
+                            char_end=m.end(),
                         ),
                         affected_party="Tenant / Licensee",
                         confidence=0.95,
@@ -816,7 +847,7 @@ class ExcessiveSecurityDepositRule(BaseRiskRule):
                         rule_id=self.rule_id,
                         rule_version=self.version,
                         finding_type=FindingType.DETERMINISTIC_RULE,
-                        statutory_cross_reference=self.statutory_cross_reference
+                        statutory_cross_reference=self.statutory_cross_reference,
                     )
         return None
 
@@ -825,8 +856,10 @@ class ExcessiveSecurityDepositRule(BaseRiskRule):
 # 7. TERMINATION RULES
 # =====================================================================
 
+
 class SubjectiveTerminationRule(BaseRiskRule):
     """Detects subjective 'sole satisfaction' termination triggers."""
+
     rule_id = "RULE-TRM-001"
     category = RiskCategory.TERMINATION
     default_severity = RiskSeverity.HIGH
@@ -837,7 +870,7 @@ class SubjectiveTerminationRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying subjective termination triggers."
+            description="Initial rule identifying subjective termination triggers.",
         )
     ]
 
@@ -847,19 +880,19 @@ class SubjectiveTerminationRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         patterns = [
             r"in\s+(?:its|the\s+company\'?s|the\s+landlord\'?s)\s+sole\s+(?:satisfaction|discretion|opinion)",
             r"if\s+(?:the\s+company|the\s+landlord)\s+deems?\s+(?:unfit|unsuitable|improper)",
             r"without\s+assigning\s+any\s+(?:reason|cause)\s+whatsoever",
-            r"unfettered\s+right\s+to\s+terminate.*without\s+assigning"
+            r"unfettered\s+right\s+to\s+terminate.*without\s+assigning",
         ]
         for p in patterns:
             m = re.search(p, t_lower)
             if m:
-                snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 80)].strip()
+                snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 80)].strip()
                 return RiskRecord(
                     risk_id=f"RISK-{self.rule_id}",
                     category=self.category,
@@ -873,7 +906,7 @@ class SubjectiveTerminationRule(BaseRiskRule):
                         section_heading=section_heading,
                         verbatim_quote=snippet,
                         char_start=m.start(),
-                        char_end=m.end()
+                        char_end=m.end(),
                     ),
                     affected_party="Employee / Contractor / Tenant",
                     confidence=0.93,
@@ -882,24 +915,27 @@ class SubjectiveTerminationRule(BaseRiskRule):
                     rule_id=self.rule_id,
                     rule_version=self.version,
                     finding_type=FindingType.DETERMINISTIC_RULE,
-                    statutory_cross_reference=self.statutory_cross_reference
+                    statutory_cross_reference=self.statutory_cross_reference,
                 )
         return None
 
 
 class RestraintOfTradeRule(BaseRiskRule):
     """Detects post-termination non-compete covenants."""
+
     rule_id = "RULE-TRM-002"
     category = RiskCategory.TERMINATION
     default_severity = RiskSeverity.CRITICAL
     title = "Potential Concern: Post-Employment Non-Compete Restraint"
     description = "Restricts the employee from working for competitors or in the same industry after termination of employment."
-    statutory_cross_reference = "Indian Contract Act, 1872 § 27 (Agreement in Restraint of Trade Void)"
+    statutory_cross_reference = (
+        "Indian Contract Act, 1872 § 27 (Agreement in Restraint of Trade Void)"
+    )
     changelog = [
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying post-employment non-compete covenants."
+            description="Initial rule identifying post-employment non-compete covenants.",
         )
     ]
 
@@ -909,7 +945,7 @@ class RestraintOfTradeRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         patterns = [
@@ -922,7 +958,7 @@ class RestraintOfTradeRule(BaseRiskRule):
         for p in patterns:
             m = re.search(p, t_lower)
             if m:
-                snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 100)].strip()
+                snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 100)].strip()
                 return RiskRecord(
                     risk_id=f"RISK-{self.rule_id}",
                     category=self.category,
@@ -936,7 +972,7 @@ class RestraintOfTradeRule(BaseRiskRule):
                         section_heading=section_heading,
                         verbatim_quote=snippet,
                         char_start=m.start(),
-                        char_end=m.end()
+                        char_end=m.end(),
                     ),
                     affected_party="Employee / Consultant",
                     confidence=0.99,
@@ -945,13 +981,14 @@ class RestraintOfTradeRule(BaseRiskRule):
                     rule_id=self.rule_id,
                     rule_version=self.version,
                     finding_type=FindingType.DETERMINISTIC_RULE,
-                    statutory_cross_reference=self.statutory_cross_reference
+                    statutory_cross_reference=self.statutory_cross_reference,
                 )
         return None
 
 
 class UnclearTerminationConditionsRule(BaseRiskRule):
     """Detects vague, ambiguous, or undefined termination triggers."""
+
     rule_id = "RULE-TRM-003"
     category = RiskCategory.TERMINATION
     default_severity = RiskSeverity.HIGH
@@ -962,7 +999,7 @@ class UnclearTerminationConditionsRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying unclear termination triggers and undefined at-will clauses."
+            description="Initial rule identifying unclear termination triggers and undefined at-will clauses.",
         )
     ]
 
@@ -972,19 +1009,19 @@ class UnclearTerminationConditionsRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         patterns = [
             r"terminate\s+(?:at\s+will|without\s+cause|at\s+any\s+time\s+without\s+reason)",
             r"terminated\s+for\s+any\s+breach\s+deemed\s+material",
             r"such\s+other\s+grounds\s+as\s+may\s+be\s+determined",
-            r"terminate.*without\s+any\s+objective\s+standards"
+            r"terminate.*without\s+any\s+objective\s+standards",
         ]
         for p in patterns:
             m = re.search(p, t_lower)
             if m:
-                snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 80)].strip()
+                snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 80)].strip()
                 return RiskRecord(
                     risk_id=f"RISK-{self.rule_id}",
                     category=self.category,
@@ -998,7 +1035,7 @@ class UnclearTerminationConditionsRule(BaseRiskRule):
                         section_heading=section_heading,
                         verbatim_quote=snippet,
                         char_start=m.start(),
-                        char_end=m.end()
+                        char_end=m.end(),
                     ),
                     affected_party="Signatory / Tenant / Employee",
                     confidence=0.92,
@@ -1007,7 +1044,7 @@ class UnclearTerminationConditionsRule(BaseRiskRule):
                     rule_id=self.rule_id,
                     rule_version=self.version,
                     finding_type=FindingType.DETERMINISTIC_RULE,
-                    statutory_cross_reference=self.statutory_cross_reference
+                    statutory_cross_reference=self.statutory_cross_reference,
                 )
         return None
 
@@ -1016,8 +1053,10 @@ class UnclearTerminationConditionsRule(BaseRiskRule):
 # 8. JURISDICTION RULES
 # =====================================================================
 
+
 class InconvenientJurisdictionRule(BaseRiskRule):
     """Detects foreign or distant jurisdiction clauses for domestic agreements."""
+
     rule_id = "RULE-JUR-001"
     category = RiskCategory.JURISDICTION
     default_severity = RiskSeverity.HIGH
@@ -1028,7 +1067,7 @@ class InconvenientJurisdictionRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying foreign or distant domestic court designations."
+            description="Initial rule identifying foreign or distant domestic court designations.",
         )
     ]
 
@@ -1038,11 +1077,19 @@ class InconvenientJurisdictionRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         if any(k in t_lower for k in ["jurisdiction", "governing law", "courts of"]):
-            foreign_places = ["singapore", "london", "england", "new york", "delaware", "california", "dubai"]
+            foreign_places = [
+                "singapore",
+                "london",
+                "england",
+                "new york",
+                "delaware",
+                "california",
+                "dubai",
+            ]
             for place in foreign_places:
                 if place in t_lower:
                     snippet = text[:150].strip()
@@ -1059,7 +1106,7 @@ class InconvenientJurisdictionRule(BaseRiskRule):
                             section_heading=section_heading,
                             verbatim_quote=snippet,
                             char_start=0,
-                            char_end=len(snippet)
+                            char_end=len(snippet),
                         ),
                         affected_party="Domestic Citizen / Indian Counterparty",
                         confidence=0.96,
@@ -1068,7 +1115,7 @@ class InconvenientJurisdictionRule(BaseRiskRule):
                         rule_id=self.rule_id,
                         rule_version=self.version,
                         finding_type=FindingType.DETERMINISTIC_RULE,
-                        statutory_cross_reference=self.statutory_cross_reference
+                        statutory_cross_reference=self.statutory_cross_reference,
                     )
         return None
 
@@ -1077,19 +1124,23 @@ class InconvenientJurisdictionRule(BaseRiskRule):
 # 9. ARBITRATION RULES
 # =====================================================================
 
+
 class SoleArbitratorRule(BaseRiskRule):
     """Detects unilateral appointment of sole arbitrator."""
+
     rule_id = "RULE-ARB-001"
     category = RiskCategory.ARBITRATION
     default_severity = RiskSeverity.HIGH
     title = "Potential Concern: Unilateral Appointment of Sole Arbitrator"
     description = "Grants one party exclusive authority to appoint the sole arbitrator."
-    statutory_cross_reference = "Arbitration and Conciliation Act, 1996 § 12(5) (Ineligibility of Arbitrator)"
+    statutory_cross_reference = (
+        "Arbitration and Conciliation Act, 1996 § 12(5) (Ineligibility of Arbitrator)"
+    )
     changelog = [
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying unilateral sole arbitrator appointments."
+            description="Initial rule identifying unilateral sole arbitrator appointments.",
         )
     ]
 
@@ -1099,19 +1150,19 @@ class SoleArbitratorRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         patterns = [
             r"sole\s+arbitrator\s+appointed\s+(?:solely\s+by|exclusively\s+by|at\s+the\s+discretion\s+of)\s+(?:the\s+company|the\s+landlord|the\s+lessor)",
             r"arbitrator\s+nominated\s+by\s+(?:the\s+managing\s+director|the\s+first\s+party)\s+alone",
             r"unilateral\s+appointment\s+of\s+arbitrator",
-            r"sole\s+arbitrator\s+unilaterally\s+appointed"
+            r"sole\s+arbitrator\s+unilaterally\s+appointed",
         ]
         for p in patterns:
             m = re.search(p, t_lower)
             if m:
-                snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 80)].strip()
+                snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 80)].strip()
                 return RiskRecord(
                     risk_id=f"RISK-{self.rule_id}",
                     category=self.category,
@@ -1125,7 +1176,7 @@ class SoleArbitratorRule(BaseRiskRule):
                         section_heading=section_heading,
                         verbatim_quote=snippet,
                         char_start=m.start(),
-                        char_end=m.end()
+                        char_end=m.end(),
                     ),
                     affected_party="Citizen / Counterparty",
                     confidence=0.98,
@@ -1134,7 +1185,7 @@ class SoleArbitratorRule(BaseRiskRule):
                     rule_id=self.rule_id,
                     rule_version=self.version,
                     finding_type=FindingType.DETERMINISTIC_RULE,
-                    statutory_cross_reference=self.statutory_cross_reference
+                    statutory_cross_reference=self.statutory_cross_reference,
                 )
         return None
 
@@ -1143,8 +1194,10 @@ class SoleArbitratorRule(BaseRiskRule):
 # 10. PRIVACY RULES
 # =====================================================================
 
+
 class BroadDataPrivacyRule(BaseRiskRule):
     """Detects unconsented third-party data sharing or perpetual retention."""
+
     rule_id = "RULE-PRV-001"
     category = RiskCategory.PRIVACY
     default_severity = RiskSeverity.MEDIUM
@@ -1155,7 +1208,7 @@ class BroadDataPrivacyRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule checking DPDP Act consent and retention boundaries."
+            description="Initial rule checking DPDP Act consent and retention boundaries.",
         )
     ]
 
@@ -1165,7 +1218,7 @@ class BroadDataPrivacyRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         if any(k in t_lower for k in ["personal data", "user data", "privacy", "information"]):
@@ -1173,12 +1226,12 @@ class BroadDataPrivacyRule(BaseRiskRule):
                 r"share.*personal\s+data.*third\s+parties.*without\s+notice",
                 r"retain.*data.*in\s+perpetuity",
                 r"unrestricted\s+right\s+to\s+monetize.*data",
-                r"waives?\s+(?:all\s+)?privacy\s+rights"
+                r"waives?\s+(?:all\s+)?privacy\s+rights",
             ]
             for p in patterns:
                 m = re.search(p, t_lower)
                 if m:
-                    snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 80)].strip()
+                    snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 80)].strip()
                     return RiskRecord(
                         risk_id=f"RISK-{self.rule_id}",
                         category=self.category,
@@ -1192,7 +1245,7 @@ class BroadDataPrivacyRule(BaseRiskRule):
                             section_heading=section_heading,
                             verbatim_quote=snippet,
                             char_start=m.start(),
-                            char_end=m.end()
+                            char_end=m.end(),
                         ),
                         affected_party="Data Principal / Consumer",
                         confidence=0.92,
@@ -1201,7 +1254,7 @@ class BroadDataPrivacyRule(BaseRiskRule):
                         rule_id=self.rule_id,
                         rule_version=self.version,
                         finding_type=FindingType.DETERMINISTIC_RULE,
-                        statutory_cross_reference=self.statutory_cross_reference
+                        statutory_cross_reference=self.statutory_cross_reference,
                     )
         return None
 
@@ -1210,8 +1263,10 @@ class BroadDataPrivacyRule(BaseRiskRule):
 # 11. INTELLECTUAL PROPERTY RULES
 # =====================================================================
 
+
 class OverbroadIPAssignmentRule(BaseRiskRule):
     """Detects overbroad assignment of pre-existing or personal IP."""
+
     rule_id = "RULE-IP-001"
     category = RiskCategory.IP
     default_severity = RiskSeverity.HIGH
@@ -1222,7 +1277,7 @@ class OverbroadIPAssignmentRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying overbroad personal IP assignments."
+            description="Initial rule identifying overbroad personal IP assignments.",
         )
     ]
 
@@ -1232,7 +1287,7 @@ class OverbroadIPAssignmentRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         patterns = [
@@ -1240,12 +1295,12 @@ class OverbroadIPAssignmentRule(BaseRiskRule):
             r"waives?\s+(?:all\s+)?moral\s+rights",
             r"assigns?\s+all\s+prior\s+and\s+future\s+intellectual\s+property",
             r"exclusive\s+ownership\s+of\s+all\s+ideas\s+conceived",
-            r"whether\s+during\s+office\s+hours\s+or\s+personal\s+time"
+            r"whether\s+during\s+office\s+hours\s+or\s+personal\s+time",
         ]
         for p in patterns:
             m = re.search(p, t_lower)
             if m:
-                snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 80)].strip()
+                snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 80)].strip()
                 return RiskRecord(
                     risk_id=f"RISK-{self.rule_id}",
                     category=self.category,
@@ -1259,7 +1314,7 @@ class OverbroadIPAssignmentRule(BaseRiskRule):
                         section_heading=section_heading,
                         verbatim_quote=snippet,
                         char_start=m.start(),
-                        char_end=m.end()
+                        char_end=m.end(),
                     ),
                     affected_party="Employee / Creator",
                     confidence=0.94,
@@ -1268,7 +1323,7 @@ class OverbroadIPAssignmentRule(BaseRiskRule):
                     rule_id=self.rule_id,
                     rule_version=self.version,
                     finding_type=FindingType.DETERMINISTIC_RULE,
-                    statutory_cross_reference=self.statutory_cross_reference
+                    statutory_cross_reference=self.statutory_cross_reference,
                 )
         return None
 
@@ -1277,8 +1332,10 @@ class OverbroadIPAssignmentRule(BaseRiskRule):
 # 12. AMBIGUITY RULES
 # =====================================================================
 
+
 class ConflictingClausesRule(BaseRiskRule):
     """Detects internal contractual contradictions (e.g. 30-day notice vs immediate lock-in)."""
+
     rule_id = "RULE-AMB-001"
     category = RiskCategory.AMBIGUITY
     default_severity = RiskSeverity.HIGH
@@ -1289,7 +1346,7 @@ class ConflictingClausesRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying cross-clause internal contradictions."
+            description="Initial rule identifying cross-clause internal contradictions.",
         )
     ]
 
@@ -1299,10 +1356,13 @@ class ConflictingClausesRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
-        if "lock-in" in t_lower and any(k in t_lower for k in ["notice of termination", "30 days notice", "terminate by giving notice"]):
+        if "lock-in" in t_lower and any(
+            k in t_lower
+            for k in ["notice of termination", "30 days notice", "terminate by giving notice"]
+        ):
             snippet = text[:150].strip()
             return RiskRecord(
                 risk_id=f"RISK-{self.rule_id}",
@@ -1317,7 +1377,7 @@ class ConflictingClausesRule(BaseRiskRule):
                     section_heading=section_heading,
                     verbatim_quote=snippet,
                     char_start=0,
-                    char_end=len(snippet)
+                    char_end=len(snippet),
                 ),
                 affected_party="Signatory / Tenant / Employee",
                 confidence=0.95,
@@ -1326,13 +1386,14 @@ class ConflictingClausesRule(BaseRiskRule):
                 rule_id=self.rule_id,
                 rule_version=self.version,
                 finding_type=FindingType.CROSS_CLAUSE_CONFLICT,
-                statutory_cross_reference=self.statutory_cross_reference
+                statutory_cross_reference=self.statutory_cross_reference,
             )
         return None
 
 
 class AmbiguousDiscretionRule(BaseRiskRule):
     """Detects vague standards of performance or unilateral interpretation clauses."""
+
     rule_id = "RULE-AMB-002"
     category = RiskCategory.AMBIGUITY
     default_severity = RiskSeverity.MEDIUM
@@ -1343,7 +1404,7 @@ class AmbiguousDiscretionRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule identifying vague discretionary standards."
+            description="Initial rule identifying vague discretionary standards.",
         )
     ]
 
@@ -1353,7 +1414,7 @@ class AmbiguousDiscretionRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
         patterns = [
@@ -1364,7 +1425,7 @@ class AmbiguousDiscretionRule(BaseRiskRule):
         for p in patterns:
             m = re.search(p, t_lower)
             if m:
-                snippet = text[max(0, m.start() - 20):min(len(text), m.end() + 80)].strip()
+                snippet = text[max(0, m.start() - 20) : min(len(text), m.end() + 80)].strip()
                 return RiskRecord(
                     risk_id=f"RISK-{self.rule_id}",
                     category=self.category,
@@ -1378,7 +1439,7 @@ class AmbiguousDiscretionRule(BaseRiskRule):
                         section_heading=section_heading,
                         verbatim_quote=snippet,
                         char_start=m.start(),
-                        char_end=m.end()
+                        char_end=m.end(),
                     ),
                     affected_party="Signatory / Tenant / Client",
                     confidence=0.90,
@@ -1387,7 +1448,7 @@ class AmbiguousDiscretionRule(BaseRiskRule):
                     rule_id=self.rule_id,
                     rule_version=self.version,
                     finding_type=FindingType.DETERMINISTIC_RULE,
-                    statutory_cross_reference=self.statutory_cross_reference
+                    statutory_cross_reference=self.statutory_cross_reference,
                 )
         return None
 
@@ -1396,19 +1457,23 @@ class AmbiguousDiscretionRule(BaseRiskRule):
 # 13. MISSING PROTECTION RULES
 # =====================================================================
 
+
 class MissingDisputeResolutionRule(BaseRiskRule):
     """Detects total absence of dispute resolution or governing law in the document."""
+
     rule_id = "RULE-MIS-001"
     category = RiskCategory.MISSING_PROTECTION
     default_severity = RiskSeverity.MEDIUM
     title = "Potential Concern: Missing Dispute Resolution or Governing Law Clause"
-    description = "The agreement completely lacks a dispute resolution mechanism or defined governing law."
+    description = (
+        "The agreement completely lacks a dispute resolution mechanism or defined governing law."
+    )
     statutory_cross_reference = "Code of Civil Procedure, 1908 § 20"
     changelog = [
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule checking document-level dispute resolution covenants."
+            description="Initial rule checking document-level dispute resolution covenants.",
         )
     ]
 
@@ -1418,11 +1483,20 @@ class MissingDisputeResolutionRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         if doc_context and doc_context.get("is_whole_document"):
             doc_lower = text.lower()
-            has_dispute = any(k in doc_lower for k in ["dispute resolution", "arbitration", "jurisdiction", "governing law", "courts of"])
+            has_dispute = any(
+                k in doc_lower
+                for k in [
+                    "dispute resolution",
+                    "arbitration",
+                    "jurisdiction",
+                    "governing law",
+                    "courts of",
+                ]
+            )
             if not has_dispute:
                 return RiskRecord(
                     risk_id=f"RISK-{self.rule_id}",
@@ -1437,7 +1511,7 @@ class MissingDisputeResolutionRule(BaseRiskRule):
                         section_heading="Document Structure",
                         verbatim_quote="Entire document lacks dispute resolution / governing law clause.",
                         char_start=0,
-                        char_end=0
+                        char_end=0,
                     ),
                     affected_party="Both Parties",
                     confidence=0.95,
@@ -1446,13 +1520,14 @@ class MissingDisputeResolutionRule(BaseRiskRule):
                     rule_id=self.rule_id,
                     rule_version=self.version,
                     finding_type=FindingType.MISSING_STATUTORY_PROTECTION,
-                    statutory_cross_reference=self.statutory_cross_reference
+                    statutory_cross_reference=self.statutory_cross_reference,
                 )
         return None
 
 
 class MissingForceMajeureNoticeRule(BaseRiskRule):
     """Detects absence of clear force majeure notice or mitigation procedures."""
+
     rule_id = "RULE-MIS-002"
     category = RiskCategory.MISSING_PROTECTION
     default_severity = RiskSeverity.LOW
@@ -1463,7 +1538,7 @@ class MissingForceMajeureNoticeRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule checking Force Majeure procedural completeness."
+            description="Initial rule checking Force Majeure procedural completeness.",
         )
     ]
 
@@ -1473,10 +1548,12 @@ class MissingForceMajeureNoticeRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
-        if "force majeure" in t_lower and not any(k in t_lower for k in ["written notice", "within 7 days", "within 14 days", "mitigat"]):
+        if "force majeure" in t_lower and not any(
+            k in t_lower for k in ["written notice", "within 7 days", "within 14 days", "mitigat"]
+        ):
             snippet = text[:150].strip()
             return RiskRecord(
                 risk_id=f"RISK-{self.rule_id}",
@@ -1491,7 +1568,7 @@ class MissingForceMajeureNoticeRule(BaseRiskRule):
                     section_heading=section_heading,
                     verbatim_quote=snippet,
                     char_start=0,
-                    char_end=len(snippet)
+                    char_end=len(snippet),
                 ),
                 affected_party="Both Parties",
                 confidence=0.90,
@@ -1500,13 +1577,14 @@ class MissingForceMajeureNoticeRule(BaseRiskRule):
                 rule_id=self.rule_id,
                 rule_version=self.version,
                 finding_type=FindingType.MISSING_STATUTORY_PROTECTION,
-                statutory_cross_reference=self.statutory_cross_reference
+                statutory_cross_reference=self.statutory_cross_reference,
             )
         return None
 
 
 class MissingDataReturnRule(BaseRiskRule):
     """Detects absence of post-termination confidential data return or deletion obligation."""
+
     rule_id = "RULE-MIS-003"
     category = RiskCategory.MISSING_PROTECTION
     default_severity = RiskSeverity.MEDIUM
@@ -1517,7 +1595,7 @@ class MissingDataReturnRule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule checking for missing post-termination data return or destruction clauses."
+            description="Initial rule checking for missing post-termination data return or destruction clauses.",
         )
     ]
 
@@ -1527,11 +1605,15 @@ class MissingDataReturnRule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
-        if any(k in t_lower for k in ["confidential information", "proprietary data", "personal data"]):
-            if "terminat" in t_lower and not any(k in t_lower for k in ["return or destroy", "delete", "purge", "surrender"]):
+        if any(
+            k in t_lower for k in ["confidential information", "proprietary data", "personal data"]
+        ):
+            if "terminat" in t_lower and not any(
+                k in t_lower for k in ["return or destroy", "delete", "purge", "surrender"]
+            ):
                 snippet = text[:150].strip()
                 return RiskRecord(
                     risk_id=f"RISK-{self.rule_id}",
@@ -1546,7 +1628,7 @@ class MissingDataReturnRule(BaseRiskRule):
                         section_heading=section_heading,
                         verbatim_quote=snippet,
                         char_start=0,
-                        char_end=len(snippet)
+                        char_end=len(snippet),
                     ),
                     affected_party="Data Principal / Disclosing Party",
                     confidence=0.89,
@@ -1555,13 +1637,14 @@ class MissingDataReturnRule(BaseRiskRule):
                     rule_id=self.rule_id,
                     rule_version=self.version,
                     finding_type=FindingType.MISSING_STATUTORY_PROTECTION,
-                    statutory_cross_reference=self.statutory_cross_reference
+                    statutory_cross_reference=self.statutory_cross_reference,
                 )
         return None
 
 
 class MissingDepositReturnSLARule(BaseRiskRule):
     """Detects absence of clear deposit refund timeframe in tenancy agreement."""
+
     rule_id = "RULE-MIS-004"
     category = RiskCategory.MISSING_PROTECTION
     default_severity = RiskSeverity.MEDIUM
@@ -1572,7 +1655,7 @@ class MissingDepositReturnSLARule(BaseRiskRule):
         RuleChangelogEntry(
             version="2024.1.0",
             effective_date="2024-01-01",
-            description="Initial rule checking for missing deposit return deadlines."
+            description="Initial rule checking for missing deposit return deadlines.",
         )
     ]
 
@@ -1582,10 +1665,19 @@ class MissingDepositReturnSLARule(BaseRiskRule):
         deterministic_facts: Dict[str, Any],
         doc_context: Optional[Dict[str, Any]] = None,
         page_number: int = 1,
-        section_heading: Optional[str] = None
+        section_heading: Optional[str] = None,
     ) -> Optional[RiskRecord]:
         t_lower = text.lower()
-        if "security deposit" in t_lower and not any(k in t_lower for k in ["within 7 days", "within 14 days", "within 30 days", "on vacating", "date of handing over"]):
+        if "security deposit" in t_lower and not any(
+            k in t_lower
+            for k in [
+                "within 7 days",
+                "within 14 days",
+                "within 30 days",
+                "on vacating",
+                "date of handing over",
+            ]
+        ):
             snippet = text[:150].strip()
             return RiskRecord(
                 risk_id=f"RISK-{self.rule_id}",
@@ -1600,7 +1692,7 @@ class MissingDepositReturnSLARule(BaseRiskRule):
                     section_heading=section_heading,
                     verbatim_quote=snippet,
                     char_start=0,
-                    char_end=len(snippet)
+                    char_end=len(snippet),
                 ),
                 affected_party="Tenant / Licensee",
                 confidence=0.91,
@@ -1609,7 +1701,7 @@ class MissingDepositReturnSLARule(BaseRiskRule):
                 rule_id=self.rule_id,
                 rule_version=self.version,
                 finding_type=FindingType.MISSING_STATUTORY_PROTECTION,
-                statutory_cross_reference=self.statutory_cross_reference
+                statutory_cross_reference=self.statutory_cross_reference,
             )
         return None
 
@@ -1617,6 +1709,7 @@ class MissingDepositReturnSLARule(BaseRiskRule):
 # =====================================================================
 # RULE REGISTRY
 # =====================================================================
+
 
 class RiskRuleRegistry:
     """Registry maintaining all active versioned risk rules."""

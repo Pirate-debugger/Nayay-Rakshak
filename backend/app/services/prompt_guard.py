@@ -52,7 +52,9 @@ def check_for_injection(text: str, raise_exception: bool = False) -> Tuple[bool,
         if match:
             matched_str = match.group(0)
             if raise_exception:
-                raise PromptInjectionDetected(f"Security Alert: Suspicious prompt pattern detected: '{matched_str}'")
+                raise PromptInjectionDetected(
+                    f"Security Alert: Suspicious prompt pattern detected: '{matched_str}'"
+                )
             return True, matched_str
     return False, ""
 
@@ -70,7 +72,9 @@ def sanitize_user_input(text: str) -> str:
 
     # Replace dangerous delimiters
     sanitized = sanitized.replace("<|im_start|>", "").replace("<|im_end|>", "")
-    sanitized = sanitized.replace("<user_document_content>", "").replace("</user_document_content>", "")
+    sanitized = sanitized.replace("<user_document_content>", "").replace(
+        "</user_document_content>", ""
+    )
 
     # Neutralize markdown image data-exfiltration patterns
     sanitized = re.sub(r"!\[(.*?)\]\((?:https?:)?//.*?\)", r"[Image Redacted: \1]", sanitized)

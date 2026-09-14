@@ -10,18 +10,20 @@ from app.api.deps import get_ai, get_current_user
 from app.core.audit import log_audit_event
 from app.core.authorization import authorize_object_access
 from app.core.config import settings
-from app.core.exceptions import ObjectNotFoundError, UnauthorizedAccessError
+from app.core.exceptions import ObjectNotFoundError
 from app.core.rate_limit import limiter
 from app.core.roles import Action
 from app.db.base import get_db
 from app.db.models import ComparisonResult, Document, DocumentChunk, User
-from app.schemas.comparison import ClauseDiffItem, ComparisonResponse, RiskDeltaSummary
+from app.schemas.comparison import ComparisonResponse
 
 router = APIRouter(prefix="/comparison", tags=["Document Comparison"])
+
 
 class CompareRequest(BaseModel):
     base_document_id: int
     target_document_id: int
+
 
 @router.post("/", response_model=ComparisonResponse)
 @limiter.limit(settings.RATE_LIMIT_COMPARISON)
@@ -30,7 +32,7 @@ async def compare_documents_endpoint(
     request: Request,
     current_user: User = Depends(get_current_user),
     ai_provider: BaseAIProvider = Depends(get_ai),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Semantically compare two legal documents (e.g. Standard Lease vs Counterparty Harsh Draft).
@@ -43,7 +45,7 @@ async def compare_documents_endpoint(
     if req.base_document_id == req.target_document_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot compare a document to itself. Please provide two distinct document IDs."
+            detail="Cannot compare a document to itself. Please provide two distinct document IDs.",
         )
 
     # Fetch both documents with centralized object-level authorization checks
@@ -52,31 +54,25 @@ async def compare_documents_endpoint(
     if not base_doc:
         raise ObjectNotFoundError(f"Base Document (ID {req.base_document_id})")
 
-    authorize_object_access(
-        user=current_user,
-        resource=base_doc,
-        action=Action.READ
-    )
+    authorize_object_access(user=current_user, resource=base_doc, action=Action.READ)
 
     target_res = await db.execute(select(Document).where(Document.id == req.target_document_id))
     target_doc = target_res.scalar_one_or_none()
     if not target_doc:
         raise ObjectNotFoundError(f"Target Document (ID {req.target_document_id})")
 
-    authorize_object_access(
-        user=current_user,
-        resource=target_doc,
-        action=Action.READ
-    )
-
-
+    authorize_object_access(user=current_user, resource=target_doc, action=Action.READ)
 
     # Fetch chunks
     b_chunks_res = await db.execute(
-        select(DocumentChunk).where(DocumentChunk.document_id == base_doc.id).order_by(DocumentChunk.chunk_index)
+        select(DocumentChunk)
+        .where(DocumentChunk.document_id == base_doc.id)
+        .order_by(DocumentChunk.chunk_index)
     )
     t_chunks_res = await db.execute(
-        select(DocumentChunk).where(DocumentChunk.document_id == target_doc.id).order_by(DocumentChunk.chunk_index)
+        select(DocumentChunk)
+        .where(DocumentChunk.document_id == target_doc.id)
+        .order_by(DocumentChunk.chunk_index)
     )
 
     b_chunk_list = b_chunks_res.scalars().all()
@@ -87,6 +83,7 @@ async def compare_documents_endpoint(
 
     # Run Semantic Comparison Engine
     from app.services.comparison.engine import SemanticComparisonEngine
+
     comp_engine = SemanticComparisonEngine()
     comparison_response = comp_engine.compare(
         base_document_id=base_doc.id,
@@ -96,7 +93,7 @@ async def compare_documents_endpoint(
         target_title=target_doc.title,
         target_text=t_text,
         base_chunks=b_chunk_list,
-        target_chunks=t_chunk_list
+        target_chunks=t_chunk_list,
     )
 
     diffs = comparison_response.clause_diffs
@@ -111,8 +108,12 @@ async def compare_documents_endpoint(
         target_title=target_doc.title,
         risk_delta_json=json.dumps(summary.model_dump()),
         added_clauses_json=json.dumps([d.model_dump() for d in diffs if d.change_type == "ADDED"]),
-        removed_clauses_json=json.dumps([d.model_dump() for d in diffs if d.change_type == "REMOVED"]),
-        modified_clauses_json=json.dumps([d.model_dump() for d in diffs if d.change_type == "MODIFIED"]),
+        removed_clauses_json=json.dumps(
+            [d.model_dump() for d in diffs if d.change_type == "REMOVED"]
+        ),
+        modified_clauses_json=json.dumps(
+            [d.model_dump() for d in diffs if d.change_type == "MODIFIED"]
+        ),
         overall_verdict=comparison_response.overall_verdict,
     )
     db.add(comp_record)
@@ -128,8 +129,8 @@ async def compare_documents_endpoint(
             "base_id": base_doc.id,
             "target_id": target_doc.id,
             "verdict": summary.net_risk_verdict,
-            "findings_count": len(comparison_response.findings)
-        }
+            "findings_count": len(comparison_response.findings),
+        },
     )
 
     return comparison_response

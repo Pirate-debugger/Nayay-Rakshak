@@ -5,11 +5,11 @@ and evidence grounding retention.
 """
 
 import asyncio
-from collections import OrderedDict
-from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import logging
+from collections import OrderedDict
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +24,7 @@ logger = logging.getLogger("nyaya_rakshak.ai_cache")
 class AICacheService:
     """
     Tier-1 In-Memory LRU + Persistent SQL AI Answer Cache.
-    
+
     CRITICAL RULES:
     1. Cache identity MUST incorporate:
        - Document content hash
@@ -50,7 +50,7 @@ class AICacheService:
         model_name: str = "gemini-2.5-flash",
         prompt_version: str = "v1.0",
         pii_redacted: bool = True,
-        user_id: Optional[int] = None
+        user_id: Optional[int] = None,
     ) -> str:
         """
         Compute deterministic SHA-256 cache identity.
@@ -59,15 +59,17 @@ class AICacheService:
         doc_hash = (document_content_hash or "statutory_general").strip()
         norm_q = question.strip().lower()
         active_source_ver = source_registry.get_version()
-        user_scope = f"user_{user_id}" if user_id and document_content_hash and doc_hash != "statutory_general" else "global"
+        user_scope = (
+            f"user_{user_id}"
+            if user_id and document_content_hash and doc_hash != "statutory_general"
+            else "global"
+        )
 
         identity_str = f"{user_scope}:{doc_hash}:{norm_q}:{model_name}:{prompt_version}:{active_source_ver}:{pii_redacted}"
         return hashlib.sha256(identity_str.encode("utf-8")).hexdigest()
 
     async def get(
-        self,
-        cache_key: str,
-        db: Optional[AsyncSession] = None
+        self, cache_key: str, db: Optional[AsyncSession] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Retrieve cached AI response if still valid against active legal sources.
@@ -82,7 +84,9 @@ class AICacheService:
                 # Invalidate if source registry version changed
                 if entry.get("source_registry_version") != current_source_ver:
                     del self._memory_cache[cache_key]
-                    logger.info(f"AI Cache invalidated for key {cache_key}: legal source registry version changed.")
+                    logger.info(
+                        f"AI Cache invalidated for key {cache_key}: legal source registry version changed."
+                    )
                 elif entry.get("expires_at") and entry["expires_at"] < now:
                     del self._memory_cache[cache_key]
                 else:
@@ -101,11 +105,17 @@ class AICacheService:
                     if db_entry.source_registry_version != current_source_ver:
                         await db.delete(db_entry)
                         await db.commit()
-                        logger.info(f"DB AI Cache evicted key {cache_key}: registry version {db_entry.source_registry_version} != {current_source_ver}.")
+                        logger.info(
+                            f"DB AI Cache evicted key {cache_key}: registry version {db_entry.source_registry_version} != {current_source_ver}."
+                        )
                         return None
 
                     if db_entry.expires_at:
-                        exp = db_entry.expires_at if db_entry.expires_at.tzinfo else db_entry.expires_at.replace(tzinfo=timezone.utc)
+                        exp = (
+                            db_entry.expires_at
+                            if db_entry.expires_at.tzinfo
+                            else db_entry.expires_at.replace(tzinfo=timezone.utc)
+                        )
                         if exp < now:
                             await db.delete(db_entry)
                             await db.commit()
@@ -125,7 +135,7 @@ class AICacheService:
                             "response_data": data,
                             "source_registry_version": db_entry.source_registry_version,
                             "expires_at": db_entry.expires_at,
-                            "hit_count": db_entry.hit_count
+                            "hit_count": db_entry.hit_count,
                         }
 
                     return data
@@ -142,7 +152,7 @@ class AICacheService:
         model_name: str = "gemini-2.5-flash",
         prompt_version: str = "v1.0",
         db: Optional[AsyncSession] = None,
-        ttl_seconds: int = 86400  # 24 hours default
+        ttl_seconds: int = 86400,  # 24 hours default
     ) -> None:
         """
         Store response in in-memory LRU and persistent database.
@@ -160,7 +170,7 @@ class AICacheService:
                 "document_hash": document_content_hash,
                 "source_registry_version": active_source_ver,
                 "expires_at": expires_at,
-                "hit_count": 1
+                "hit_count": 1,
             }
 
         # 2. Store in DB
@@ -188,7 +198,7 @@ class AICacheService:
                         response_json=payload_json,
                         evidence_verified=True,
                         expires_at=expires_at,
-                        created_at=now
+                        created_at=now,
                     )
                     db.add(new_entry)
                 await db.commit()
@@ -196,9 +206,7 @@ class AICacheService:
                 logger.warning(f"Error persisting to DB AI cache: {e}")
 
     async def evict_document(
-        self,
-        document_content_hash: str,
-        db: Optional[AsyncSession] = None
+        self, document_content_hash: str, db: Optional[AsyncSession] = None
     ) -> int:
         """
         Purge all sensitive cached results when a source document is deleted.
@@ -211,7 +219,8 @@ class AICacheService:
         # 1. Clear matching in-memory cache entries
         async with self._lock:
             keys_to_delete = [
-                k for k, v in self._memory_cache.items()
+                k
+                for k, v in self._memory_cache.items()
                 if v.get("document_hash") == document_content_hash
             ]
             for k in keys_to_delete:
@@ -229,7 +238,9 @@ class AICacheService:
                     evicted_count += 1
                 await db.commit()
                 if entries:
-                    logger.info(f"Purged {len(entries)} DB cache entries for document hash {document_content_hash[:8]}.")
+                    logger.info(
+                        f"Purged {len(entries)} DB cache entries for document hash {document_content_hash[:8]}."
+                    )
             except Exception as e:
                 logger.warning(f"Error evicting DB AI cache entries: {e}")
 

@@ -7,7 +7,7 @@ async def test_document_comparison_and_risk_delta(client, auth_headers):
     base_res = await client.post(
         "/api/v1/documents/load-sample",
         data={"sample_key": "standard_residential_lease_delhi"},
-        headers=auth_headers
+        headers=auth_headers,
     )
     assert base_res.status_code == 201
     base_id = base_res.json()["id"]
@@ -16,7 +16,7 @@ async def test_document_comparison_and_risk_delta(client, auth_headers):
     target_res = await client.post(
         "/api/v1/documents/load-sample",
         data={"sample_key": "harsh_landlord_lease_delhi"},
-        headers=auth_headers
+        headers=auth_headers,
     )
     assert target_res.status_code == 201
     target_id = target_res.json()["id"]
@@ -25,7 +25,7 @@ async def test_document_comparison_and_risk_delta(client, auth_headers):
     comp_res = await client.post(
         "/api/v1/comparison/",
         json={"base_document_id": base_id, "target_document_id": target_id},
-        headers=auth_headers
+        headers=auth_headers,
     )
     assert comp_res.status_code == 200
     data = comp_res.json()
@@ -40,7 +40,15 @@ async def test_document_comparison_and_risk_delta(client, auth_headers):
     # Validate finding schema
     f = data["findings"][0]
     assert "finding_id" in f
-    assert f["category"] in {"IDENTICAL", "SIMILAR", "MODIFIED", "NEW", "REMOVED", "CONFLICTING", "MISSING"}
+    assert f["category"] in {
+        "IDENTICAL",
+        "SIMILAR",
+        "MODIFIED",
+        "NEW",
+        "REMOVED",
+        "CONFLICTING",
+        "MISSING",
+    }
     assert "dimension" in f
     assert "materiality" in f
     assert "difference_explanation" in f

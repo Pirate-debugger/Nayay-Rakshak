@@ -15,7 +15,7 @@ Steps never state a legal outcome. Language is always hedged.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from app.schemas.action_navigator import (
     ActionStep,
@@ -29,10 +29,10 @@ from app.schemas.action_navigator import (
 
 _SEV_TO_URGENCY: Dict[str, UrgencyLevel] = {
     "CRITICAL": UrgencyLevel.IMMEDIATE,
-    "HIGH":     UrgencyLevel.HIGH,
-    "MEDIUM":   UrgencyLevel.MEDIUM,
-    "LOW":      UrgencyLevel.LOW,
-    "SEVERE":   UrgencyLevel.IMMEDIATE,
+    "HIGH": UrgencyLevel.HIGH,
+    "MEDIUM": UrgencyLevel.MEDIUM,
+    "LOW": UrgencyLevel.LOW,
+    "SEVERE": UrgencyLevel.IMMEDIATE,
 }
 
 
@@ -47,6 +47,7 @@ def _urgency_order(u: UrgencyLevel) -> int:
 
 
 # ─── Step Builders ────────────────────────────────────────────────────────────
+
 
 def _build_risk_steps(risk_records: List[Any]) -> List[ActionStep]:
     """One ActionStep per risk, focusing on the recommended_question or countermeasure."""
@@ -67,20 +68,21 @@ def _build_risk_steps(risk_records: List[Any]) -> List[ActionStep]:
             evidence_quote = getattr(evidence_obj, "verbatim_quote", "")[:80]
 
         source = getattr(rr, "risk_id", "?")
-        action = (
-            f"Review the '{title}' clause carefully. "
-            + (f"Consider asking: {recommended_q}" if recommended_q else "")
+        action = f"Review the '{title}' clause carefully. " + (
+            f"Consider asking: {recommended_q}" if recommended_q else ""
         )
 
-        steps.append(ActionStep(
-            step_number=0,  # Will be renumbered at the end
-            action=action.strip(),
-            reason=getattr(rr, "why_it_matters", getattr(rr, "plain_language_explanation", "")),
-            evidence_source=f"{source}" + (f": \"{evidence_quote}\"" if evidence_quote else ""),
-            urgency=urgency,
-            dependency=None,
-            is_professional_review_step=getattr(rr, "professional_review_recommended", False),
-        ))
+        steps.append(
+            ActionStep(
+                step_number=0,  # Will be renumbered at the end
+                action=action.strip(),
+                reason=getattr(rr, "why_it_matters", getattr(rr, "plain_language_explanation", "")),
+                evidence_source=f"{source}" + (f': "{evidence_quote}"' if evidence_quote else ""),
+                urgency=urgency,
+                dependency=None,
+                is_professional_review_step=getattr(rr, "professional_review_recommended", False),
+            )
+        )
     return steps
 
 
@@ -102,10 +104,7 @@ def _build_obligation_steps(obligations: List[Dict[str, Any]]) -> List[ActionSte
             for kw in ("immediately", "within 24", "within 48", "urgent", "at once")
         ):
             urgency = UrgencyLevel.IMMEDIATE
-        elif deadline and any(
-            kw in deadline.lower()
-            for kw in ("7 days", "7-day", "week")
-        ):
+        elif deadline and any(kw in deadline.lower() for kw in ("7 days", "7-day", "week")):
             urgency = UrgencyLevel.HIGH
 
         step_action = (
@@ -114,18 +113,20 @@ def _build_obligation_steps(obligations: List[Dict[str, Any]]) -> List[ActionSte
             + ". Confirm this obligation is clearly understood and achievable."
         )
 
-        steps.append(ActionStep(
-            step_number=0,
-            action=step_action,
-            reason=(
-                f"This is a stated obligation in the agreement"
-                + (f". Non-compliance may result in: {penalty}" if penalty else ".")
-            ),
-            evidence_source=oid,
-            urgency=urgency,
-            dependency=None,
-            is_professional_review_step=False,
-        ))
+        steps.append(
+            ActionStep(
+                step_number=0,
+                action=step_action,
+                reason=(
+                    "This is a stated obligation in the agreement"
+                    + (f". Non-compliance may result in: {penalty}" if penalty else ".")
+                ),
+                evidence_source=oid,
+                urgency=urgency,
+                dependency=None,
+                is_professional_review_step=False,
+            )
+        )
     return steps
 
 
@@ -141,24 +142,26 @@ def _build_missing_clause_steps(missing_clauses: List[Dict[str, Any]]) -> List[A
             continue
 
         urgency = UrgencyLevel.HIGH if importance == "CRITICAL" else UrgencyLevel.MEDIUM
-        action = (
-            f"Request that a '{name}' clause be included before signing."
-            + (f" Suggested language: \"{suggestion[:120]}...\"" if len(suggestion) > 120 else
-               (f" Suggested language: \"{suggestion}\"" if suggestion else ""))
+        action = f"Request that a '{name}' clause be included before signing." + (
+            f' Suggested language: "{suggestion[:120]}..."'
+            if len(suggestion) > 120
+            else (f' Suggested language: "{suggestion}"' if suggestion else "")
         )
 
-        steps.append(ActionStep(
-            step_number=0,
-            action=action,
-            reason=(
-                f"This clause is absent, which may leave you without protection. "
-                + (f"Risk: {risk}" if risk else "")
-            ),
-            evidence_source="missing_clause::" + name.replace(" ", "_"),
-            urgency=urgency,
-            dependency="Collect signed copy of the agreement",
-            is_professional_review_step=False,
-        ))
+        steps.append(
+            ActionStep(
+                step_number=0,
+                action=action,
+                reason=(
+                    "This clause is absent, which may leave you without protection. "
+                    + (f"Risk: {risk}" if risk else "")
+                ),
+                evidence_source="missing_clause::" + name.replace(" ", "_"),
+                urgency=urgency,
+                dependency="Collect signed copy of the agreement",
+                is_professional_review_step=False,
+            )
+        )
     return steps
 
 
@@ -177,12 +180,11 @@ def _build_escalation_steps(triggers: List[EscalationTrigger]) -> List[ActionSte
             + "; ".join(t.trigger_type.value.replace("_", " ") for t in triggers[:3])
             + ("..." if len(triggers) > 3 else ".")
         ),
-        evidence_source="escalation_engine::" + ",".join(
-            t.trigger_type.value for t in triggers[:3]
-        ),
-        urgency=UrgencyLevel.HIGH if any(
-            t.severity == IssueSeverity.CRITICAL for t in triggers
-        ) else UrgencyLevel.MEDIUM,
+        evidence_source="escalation_engine::"
+        + ",".join(t.trigger_type.value for t in triggers[:3]),
+        urgency=UrgencyLevel.HIGH
+        if any(t.severity == IssueSeverity.CRITICAL for t in triggers)
+        else UrgencyLevel.MEDIUM,
         dependency=None,
         is_professional_review_step=True,
     )
@@ -204,11 +206,19 @@ def _build_document_collection_step() -> ActionStep:
 # ─── Question Builder ─────────────────────────────────────────────────────────
 
 _COUNTERPARTY_CATEGORIES = {
-    "FINANCIAL", "TERMINATION", "OBLIGATION ASYMMETRY", "RENEWAL",
-    "LIABILITY", "INDEMNITY",
+    "FINANCIAL",
+    "TERMINATION",
+    "OBLIGATION ASYMMETRY",
+    "RENEWAL",
+    "LIABILITY",
+    "INDEMNITY",
 }
 _ADVOCATE_CATEGORIES = {
-    "JURISDICTION", "ARBITRATION", "MISSING PROTECTION", "IP", "AMBIGUITY",
+    "JURISDICTION",
+    "ARBITRATION",
+    "MISSING PROTECTION",
+    "IP",
+    "AMBIGUITY",
 }
 
 
@@ -242,13 +252,15 @@ def build_questions(
         sev_str = sev_obj.value if hasattr(sev_obj, "value") else str(sev_obj)
         priority = _SEV_TO_URGENCY.get(sev_str.upper(), UrgencyLevel.MEDIUM)
 
-        questions.append(QuestionItem(
-            question=q_text,
-            purpose=getattr(rr, "why_it_matters", "Clarifying this reduces legal risk."),
-            ask_whom=_ask_whom(cat_str),
-            priority=priority,
-            source_risk_id=getattr(rr, "risk_id", None),
-        ))
+        questions.append(
+            QuestionItem(
+                question=q_text,
+                purpose=getattr(rr, "why_it_matters", "Clarifying this reduces legal risk."),
+                ask_whom=_ask_whom(cat_str),
+                priority=priority,
+                source_risk_id=getattr(rr, "risk_id", None),
+            )
+        )
 
     # From AI analysis risks
     for ar in analysis_risks:
@@ -257,13 +269,17 @@ def build_questions(
             continue
         seen.add(q_text)
         cat = ar.get("category", "")
-        questions.append(QuestionItem(
-            question=f"Regarding the {ar.get('title', 'identified clause')}: {q_text}",
-            purpose=ar.get("description", "This addresses an identified concern in the document."),
-            ask_whom=_ask_whom(cat),
-            priority=UrgencyLevel.MEDIUM,
-            source_risk_id=ar.get("risk_id"),
-        ))
+        questions.append(
+            QuestionItem(
+                question=f"Regarding the {ar.get('title', 'identified clause')}: {q_text}",
+                purpose=ar.get(
+                    "description", "This addresses an identified concern in the document."
+                ),
+                ask_whom=_ask_whom(cat),
+                priority=UrgencyLevel.MEDIUM,
+                source_risk_id=ar.get("risk_id"),
+            )
+        )
 
     # Sort by priority
     questions.sort(key=lambda q: _urgency_order(q.priority))
@@ -271,6 +287,7 @@ def build_questions(
 
 
 # ─── Main Assembler ───────────────────────────────────────────────────────────
+
 
 def build_next_steps(
     risk_records: List[Any],
