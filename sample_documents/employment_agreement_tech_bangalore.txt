@@ -1,0 +1,30 @@
+EMPLOYMENT AND CONFIDENTIALITY AGREEMENT (BANGALORE, KARNATAKA)
+
+This Employment Agreement is entered into on 15th January 2025 at Bangalore, Karnataka, India.
+
+BETWEEN:
+NexGen Tech Solutions Private Limited, a company incorporated under the Companies Act, 2013, having its registered office at Outer Ring Road, Bellandur, Bangalore - 560103 ("Company");
+
+AND
+Mr. Rohan Verma, residing at Indiranagar, Bangalore - 560038, PAN: BLRPV4567M, Aadhaar: 3344 5566 7788, Phone: +91-9123456780 ("Employee").
+
+1. POSITION AND DUTIES
+The Employee is appointed as Senior Software Engineer. The Employee agrees to devote full business time and best efforts to the Company.
+
+2. PROBATION AND NOTICE PERIOD
+The Employee shall serve a probation period of 6 months.
+During probation, either party may terminate employment with 15 days notice.
+Following confirmation, the Employee must provide 90 (ninety) days written notice prior to resignation. The Company reserves the option to accept notice pay in lieu thereof or reject early release.
+
+3. POST-EMPLOYMENT RESTRICTION AND NON-COMPETE
+The Employee covenants that for a period of 12 (twelve) months following cessation of employment for any reason, the Employee shall NOT directly or indirectly engage in, work for, consult, or invest in any competing software company anywhere in India or globally.
+(Note: Under Section 27 of the Indian Contract Act 1872, agreements in restraint of lawful profession, trade, or business are void except in sale of goodwill).
+
+4. INTELLECTUAL PROPERTY ASSIGNMENT
+All works, inventions, patents, code, designs, algorithms, and documentation developed by Employee during employment, whether during office hours or personal time, using Company resources or personal equipment, shall be the sole and exclusive property of the Company as "works made for hire" under the Indian Copyright Act, 1957.
+
+5. LIQUIDATED DAMAGES ON RESIGNATION
+If Employee fails to complete the 90-day notice period or resigns within 12 months of joining, the Employee shall pay liquidated damages amounting to INR 3,00,000/- towards training costs.
+
+6. GOVERNING LAW AND JURISDICTION
+This Agreement shall be governed by the laws of India and the courts of Bangalore shall have exclusive jurisdiction.
